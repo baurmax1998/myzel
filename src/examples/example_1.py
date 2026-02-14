@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 
 from abc import ABC, abstractmethod
+from typing import TypeVar, Type
+import boto3
+from botocore.session import Session
+
+T = TypeVar('T', bound='Resources')
 
 
 @dataclass
@@ -12,12 +17,15 @@ class AwsEnviroment:
 
 class Resources(ABC):  # Interface
 
+
+    @classmethod
     @abstractmethod
-    def list(self):
+    def list(cls: Type[T], env: AwsEnviroment) -> list[T]:
         pass
 
+    @classmethod
     @abstractmethod
-    def get(self):
+    def get(cls: Type[T], tech_id: str, env: AwsEnviroment) -> T:
         pass
 
     @abstractmethod
@@ -36,14 +44,16 @@ class Resources(ABC):  # Interface
 class AwsApp:
     name: str
     env: AwsEnviroment
-    constructs: list[str]
     app_to_tech_id: dict[str, str]
+    constructs: list[str]
 
 
 class S3(Resources):
+    pass
+
+app = AwsApp(name="example_1", env=AwsEnviroment(), app_to_tech_id={}, constructs=[])
+
+S3(app)
 
 
 
-app = AwsApp(name="example_1", env=AwsEnviroment(), app_to_tech_id={})
-
-S3(a)
