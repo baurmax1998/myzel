@@ -76,29 +76,31 @@ class BaseResource(ABC):
 
 ### 2.2 Konkrete Resource-Implementierungen
 
-#### EC2Instance
+#### LambdaFunction
 ```python
-class EC2Instance(BaseResource):
-    def __init__(self, resource_id, instance_type, ami_id, **kwargs):
-        self.resource_type = "EC2Instance"
-        self.instance_type = instance_type
-        self.ami_id = ami_id
+class LambdaFunction(BaseResource):
+    def __init__(self, resource_id, function_name, runtime, handler, role_arn, **kwargs):
+        self.resource_type = "LambdaFunction"
+        self.function_name = function_name
+        self.runtime = runtime
+        self.handler = handler
+        self.role_arn = role_arn
         # ...
 
     def create() -> bool:
-        # boto3 client.run_instances() aufrufen
+        # boto3 client.create_function() aufrufen
         # aws_id speichern
 
     def read() -> dict | None:
-        # boto3 client.describe_instances() aufrufen
+        # boto3 client.get_function() aufrufen
         # aktuellen State zurückgeben
 
     def update(changes: dict):
         # je nach Property unterschiedliche Update-Strategien
-        # z.B. instance stop/modify/start für manche Properties
+        # z.B. update_function_code(), update_function_configuration()
 
     def delete() -> bool:
-        # boto3 client.terminate_instances() aufrufen
+        # boto3 client.delete_function() aufrufen
 ```
 
 #### S3Bucket
@@ -149,20 +151,24 @@ class StateManager:
 ```yaml
 # iac-state.yaml
 resources:
-  ec2_web_server:
-    resource_type: EC2Instance
-    resource_id: ec2_web_server
-    aws_id: i-1234567890abcdef0  # wird von AWS zurückgegeben
+  lambda_processor:
+    resource_type: LambdaFunction
+    resource_id: lambda_processor
+    aws_id: arn:aws:lambda:eu-central-1:123456789:function:lambda-processor
     state: ACTIVE
     properties:
-      instance_type: t3.micro
-      ami_id: ami-0c55b159cbfafe1f0
-      subnet_id: subnet-12345
-      security_groups:
-        - sg-12345
+      function_name: lambda-processor
+      runtime: python3.11
+      handler: index.lambda_handler
+      role_arn: arn:aws:iam::123456789:role/lambda-execution-role
+      timeout: 60
+      memory_size: 256
+      environment:
+        ENVIRONMENT: production
+        LOG_LEVEL: INFO
     tags:
       Environment: production
-      Name: WebServer
+      Name: DataProcessor
     created_at: 2024-02-14T10:00:00Z
     last_modified: 2024-02-14T10:05:00Z
 
@@ -302,7 +308,7 @@ class DiffEngine:
 
 #### Szenario 3: AWS-Drift erkennen
 ```
-1. Jemand ändert EC2-Instance manuell in AWS Console
+1. Jemand ändert Lambda-Function manuell in AWS Console
 2. cli.refresh()  → ruft aktuelle States ab
 3. diff_engine.calculate_diffs()  → erkennt Unterschied
 4. cli.show_diffs()  → zeigt Drift
@@ -357,11 +363,11 @@ myzel/
 │   │   └── diff_engine.py             # DiffEngine Logik
 │   ├── resources/
 │   │   ├── __init__.py
-│   │   ├── ec2_instance.py            # EC2Instance Klasse
+│   │   ├── lambda_function.py         # LambdaFunction Klasse
 │   │   └── s3_bucket.py               # S3Bucket Klasse
 │   ├── aws/
 │   │   ├── __init__.py
-│   │   ├── ec2_client.py              # boto3 EC2 wrapper
+│   │   ├── lambda_client.py           # boto3 Lambda wrapper
 │   │   └── s3_client.py               # boto3 S3 wrapper
 │   └── cli.py                          # CLI-Interface
 ├── config/
