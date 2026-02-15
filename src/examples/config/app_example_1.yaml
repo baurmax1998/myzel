@@ -1,8 +1,8 @@
 resources:
   my-example-bucket-testmb-22:
     resource_id: my-example-bucket-testmb-22
-    technical_id: null
+    technical_id: my-example-bucket-testmb-24
     resource_type: S3
 metadata:
-  version: '1.0'
-  last_sync: '2026-02-15T03:12:46.862495'
+  version: 1.0.1
+  last_sync: '2026-02-15T03:17:12.908391'
