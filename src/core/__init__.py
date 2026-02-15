@@ -9,10 +9,9 @@ from .diff_engine import DiffEngine
 
 
 def deploy(
-    app,
-    config_dir: str = "/Users/ba22036/PycharmProjects/myzel/src/examples/config",
-    dry_run: bool = False,
-    auto_increment: bool = True
+        app,
+        config_dir: str = "/Users/ba22036/PycharmProjects/myzel/src/examples/config",
+        dry_run: bool = False,
 ) -> dict:
     """
     Deploy-Funktion für AwsApp
@@ -21,7 +20,6 @@ def deploy(
         app: AwsApp-Instanz mit name, env und constructs
         config_dir: Verzeichnis für YAML-Dateien
         dry_run: Wenn True, nur zeigen was passieren würde
-        auto_increment: Wenn True, Version automatisch erhöhen
 
     Returns:
         dict mit Deploy-Ergebnissen
@@ -56,7 +54,8 @@ def deploy(
             if resource_id not in state["resources"]:
                 # Neue Ressource - initialisiere das Mapping
                 # technical_id wird aus bucket_name oder aws_id ermittelt
-                technical_id = getattr(resource, 'bucket_name', None) or getattr(resource, 'aws_id', None) or resource_id
+                technical_id = getattr(resource, 'bucket_name', None) or getattr(resource, 'aws_id',
+                                                                                 None) or resource_id
                 state["resources"][resource_id] = {
                     "resource_id": resource_id,
                     "technical_id": technical_id,
@@ -69,9 +68,9 @@ def deploy(
         diff_engine = DiffEngine(state_manager, resources_dict)
 
         # Berechne Diffs
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Deploying application: {app.name}")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         diffs = diff_engine.calculate_diffs()
 
@@ -121,7 +120,8 @@ def deploy(
 
                 # Speichere Mapping: resource_id, technical_id, resource_type
                 # technical_id wird aus bucket_name (S3) oder aws_id ermittelt
-                technical_id = getattr(construct, 'bucket_name', None) or getattr(construct, 'aws_id', None) or resource_id
+                technical_id = getattr(construct, 'bucket_name', None) or getattr(construct, 'aws_id',
+                                                                                  None) or resource_id
 
                 state["resources"][resource_id] = {
                     "resource_id": resource_id,
@@ -130,24 +130,23 @@ def deploy(
                 }
 
             # Erhöhe Version
-            if auto_increment:
-                current_version = state.get("metadata", {}).get("version", "1.0")
-                try:
-                    v = version.parse(current_version)
-                    # Erhöhe die Patch-Version
-                    new_version = f"{v.major}.{v.minor}.{v.micro + 1}"
-                except Exception:
-                    new_version = "1.0.1"
+            current_version = state.get("metadata", {}).get("version", "1.0")
+            try:
+                v = version.parse(current_version)
+                # Erhöhe die Patch-Version
+                new_version = f"{v.major}.{v.minor}.{v.micro + 1}"
+            except Exception:
+                new_version = "1.0.1"
 
-                state["metadata"]["version"] = new_version
-                print(f"\n✓ Version updated: {current_version} -> {new_version}")
+            state["metadata"]["version"] = new_version
+            print(f"\n✓ Version updated: {current_version} -> {new_version}")
 
             state_manager.save_state(state)
             print(f"✓ State saved to: {config_file}")
 
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Deploy result: {len(apply_results['applied'])} applied, {len(apply_results['failed'])} failed")
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         return {
             "status": "success" if not apply_results["failed"] else "partial",
