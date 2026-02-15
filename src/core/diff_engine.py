@@ -69,14 +69,21 @@ class DiffEngine:
                 # Ressource existiert nicht in AWS mit desired properties
                 if is_tracked:
                     # War vorher getracked -> UPDATE (Properties wurden geändert, Ressource muss neu erstellt werden)
+                    state = self.state_manager.load_state()
+                    mapped_resource = state.get("resources", {}).get(resource_id, {})
+                    old_technical_id = mapped_resource.get("technical_id")
+
                     for prop, desired_val in desired_properties.items():
+                        # Für bucket_name: nutze old_technical_id als current_value
+                        current_value = old_technical_id if prop == "bucket_name" else None
+
                         diffs.append(
                             Diff(
                                 resource_id=resource_id,
                                 resource_type=resource.__class__.__name__,
                                 diff_type=DiffType.UPDATE,
                                 field=prop,
-                                current_value=None,
+                                current_value=current_value,
                                 desired_value=desired_val
                             )
                         )
@@ -94,13 +101,22 @@ class DiffEngine:
                 for prop, desired_val in desired_properties.items():
                     actual_val = actual_state.get(prop)
                     if actual_val != desired_val:
+                        # Für Updates mit technical_id: nutze old_technical_id statt actual_val
+                        # (wenn sich der Name geändert hat, können wir nicht mehr auslesen)
+                        current_value = actual_val
+                        if is_tracked and prop == "bucket_name":
+                            # Nutze den stored technical_id als old_value
+                            state = self.state_manager.load_state()
+                            mapped_resource = state.get("resources", {}).get(resource_id, {})
+                            current_value = mapped_resource.get("technical_id")
+
                         diffs.append(
                             Diff(
                                 resource_id=resource_id,
                                 resource_type=resource.__class__.__name__,
                                 diff_type=DiffType.UPDATE,
                                 field=prop,
-                                current_value=actual_val,
+                                current_value=current_value,
                                 desired_value=desired_val
                             )
                         )
@@ -142,7 +158,12 @@ class DiffEngine:
                             "message": f"Created {diff.resource_type} '{diff.resource_id}'"
                         })
                     elif diff.diff_type == DiffType.UPDATE:
-                        resource.update(diff.field, diff.current_value, diff.desired_value)
+                        # Hole den alten technical_id aus der YAML für Updates
+                        state = self.state_manager.load_state()
+                        mapped_resource = state.get("resources", {}).get(diff.resource_id, {})
+                        old_technical_id = mapped_resource.get("technical_id")
+
+                        resource.update(diff.field, diff.current_value, diff.desired_value, old_technical_id)
                         results["applied"].append({
                             "diff": str(diff),
                             "status": "SUCCESS",

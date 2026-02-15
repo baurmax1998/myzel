@@ -3,6 +3,10 @@ resources:
     resource_id: my-example-bucket-testmb-22
     technical_id: my-example-bucket-testmb-24
     resource_type: S3
+  prod-data:
+    resource_id: prod-data
+    technical_id: my-data-prod-v2
+    resource_type: S3
 metadata:
   version: 1.0.1
-  last_sync: '2026-02-15T03:17:12.908391'
+  last_sync: '2026-02-15T03:23:03.083127'
