@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TypeVar, Type
 import boto3
 from botocore.session import Session
+from src.core import deploy
 
 T = TypeVar('T', bound='Resources')
 
@@ -49,6 +50,7 @@ class S3(Resources):
     ):
         self.bucket_name = bucket_name
         self.env = env
+        self.aws_id = None
         self.s3_client = boto3.session.Session(
             profile_name=env.profile,
             region_name=env.region
@@ -95,6 +97,19 @@ class S3(Resources):
             print(f"Fehler beim Abrufen des Buckets {tech_id}: {e}")
             raise
 
+    def read(self) -> dict:
+        """Lese den aktuellen State des S3 Buckets von AWS"""
+        try:
+            self.s3_client.head_bucket(Bucket=self.bucket_name)
+            # Bucket existiert, gebe Properties zurück
+            return {
+                "bucket_name": self.bucket_name,
+                "env": self.env
+            }
+        except Exception:
+            # Bucket existiert nicht
+            return None
+
     def create(self) -> str:
         """Erstelle einen neuen S3 Bucket und gebe die ARN zurück"""
         try:
@@ -111,21 +126,25 @@ class S3(Resources):
             self.s3_client.create_bucket(**kwargs)
 
             arn = f"arn:aws:s3:::{self.bucket_name}"
+            self.aws_id = arn
             print(f"S3 Bucket '{self.bucket_name}' erfolgreich erstellt")
             return arn
         except Exception as e:
             print(f"Fehler beim Erstellen des Buckets: {e}")
             raise
 
-    def update(self, tech_id: str):
+    def update(self, field: str = None, value: str = None):
         """Update die S3 Bucket Konfiguration"""
         try:
-            print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert")
+            if field and value:
+                print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert: {field}={value}")
+            else:
+                print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert")
         except Exception as e:
             print(f"Fehler beim Update des Buckets: {e}")
             raise
 
-    def delete(self, tech_id: str):
+    def delete(self, tech_id: str = None):
         """Lösche den S3 Bucket und alle Objekte darin"""
         try:
             # Lösche alle Objekte im Bucket
@@ -155,15 +174,15 @@ class S3(Resources):
 class AwsApp:
     name: str
     env: AwsEnviroment
-    app_to_tech_id: dict[str, str]
-    constructs: list[Resources]
+    app_to_tech_id: dict
+    constructs: list
 
 app = AwsApp(name="example_1", env=AwsEnviroment(), app_to_tech_id={}, constructs=[])
 
 
 # S3 Bucket erstellen
 s3_bucket = S3(
-    bucket_name="my-example-bucket-testmb",
+    bucket_name="my-example-bucket-testmb-22",
     env=app.env
 )
 app.constructs.append(s3_bucket)
