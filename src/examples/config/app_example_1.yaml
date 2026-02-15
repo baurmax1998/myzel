@@ -1,12 +1,8 @@
 resources:
-  '0':
+  my-example-bucket-testmb-22:
+    resource_id: my-example-bucket-testmb-22
+    technical_id: null
     resource_type: S3
-    resource_id: '0'
-    aws_id: arn:aws:s3:::my-example-bucket-testmb-22
-    properties:
-      bucket_name: my-example-bucket-testmb-22
-    created_at: '2026-02-15T02:13:47.196600'
-    last_modified: '2026-02-15T02:13:47.196613'
 metadata:
-  version: 1.0.1
-  last_sync: '2026-02-15T02:13:47.196666'
+  version: '1.0'
+  last_sync: '2026-02-15T03:12:46.862495'
