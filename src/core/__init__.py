@@ -10,7 +10,7 @@ from .diff_engine import DiffEngine
 
 def deploy(
     app,
-    config_dir: str = "config",
+    config_dir: str = "/Users/ba22036/PycharmProjects/myzel/src/examples/config",
     dry_run: bool = False,
     auto_increment: bool = True
 ) -> dict:
@@ -55,10 +55,11 @@ def deploy(
         for resource_id, resource in resources_dict.items():
             if resource_id not in state["resources"]:
                 # Neue Ressource - initialisiere das Mapping
-                # technical_id wird später aktualisiert nach create/update
+                # technical_id wird aus bucket_name oder aws_id ermittelt
+                technical_id = getattr(resource, 'bucket_name', None) or getattr(resource, 'aws_id', None) or resource_id
                 state["resources"][resource_id] = {
                     "resource_id": resource_id,
-                    "technical_id": None,
+                    "technical_id": technical_id,
                     "resource_type": resource.__class__.__name__
                 }
 
@@ -119,7 +120,8 @@ def deploy(
                     resource_id = str(app.constructs.index(construct))
 
                 # Speichere Mapping: resource_id, technical_id, resource_type
-                technical_id = getattr(construct, 'bucket_name', None) or getattr(construct, 'aws_id', None)
+                # technical_id wird aus bucket_name (S3) oder aws_id ermittelt
+                technical_id = getattr(construct, 'bucket_name', None) or getattr(construct, 'aws_id', None) or resource_id
 
                 state["resources"][resource_id] = {
                     "resource_id": resource_id,
