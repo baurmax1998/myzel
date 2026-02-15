@@ -37,7 +37,7 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
-    def update(self, tech_id: str):
+    def update(self, field: str = None, old_value: str = None, new_value: str = None):
         pass
 
     @abstractmethod
@@ -50,9 +50,11 @@ class S3(Resources):
 
     def __init__(
         self,
+        resource_id: str,
         bucket_name: str,
         env: AwsEnviroment
     ):
+        self.resource_id = resource_id
         self.bucket_name = bucket_name
         self.env = env
         self.aws_id = None
@@ -74,7 +76,8 @@ class S3(Resources):
             response = s3_client.list_buckets()
             buckets = []
             for bucket in response.get('Buckets', []):
-                buckets.append(cls(bucket_name=bucket['Name'], env=env))
+                bucket_name = bucket['Name']
+                buckets.append(cls(resource_id=bucket_name, bucket_name=bucket_name, env=env))
             return buckets
         except Exception as e:
             print(f"Fehler beim Auflisten der Buckets: {e}")
@@ -93,8 +96,8 @@ class S3(Resources):
             # Prüfe ob Bucket existiert
             s3_client.head_bucket(Bucket=tech_id)
 
-
             return cls(
+                resource_id=tech_id,
                 bucket_name=tech_id,
                 env=env,
             )
@@ -108,8 +111,7 @@ class S3(Resources):
             self.s3_client.head_bucket(Bucket=self.bucket_name)
             # Bucket existiert, gebe Properties zurück
             return {
-                "bucket_name": self.bucket_name,
-                "env": self.env
+                "bucket_name": self.bucket_name
             }
         except Exception:
             # Bucket existiert nicht
@@ -138,13 +140,37 @@ class S3(Resources):
             print(f"Fehler beim Erstellen des Buckets: {e}")
             raise
 
-    def update(self, field: str = None, value: str = None):
+    def update(self, field: str = None, old_value: str = None, new_value: str = None):
         """Update die S3 Bucket Konfiguration"""
         try:
-            if field and value:
-                print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert: {field}={value}")
+            if field == "bucket_name":
+                # Für bucket_name: alter Bucket muss gelöscht und neuer erstellt werden
+                # (S3 Buckets können nicht umbenannt werden)
+                print(f"S3 Bucket wird umbenannt: {old_value} -> {new_value}")
+
+                # 1. Lösche den alten Bucket
+                if old_value:
+                    try:
+                        self.s3_client.delete_bucket(Bucket=old_value)
+                        print(f"  ✓ Alter Bucket '{old_value}' gelöscht")
+                    except Exception as e:
+                        print(f"  ⚠ Konnte alten Bucket nicht löschen: {e}")
+
+                # 2. Erstelle neuen Bucket
+                self.bucket_name = new_value
+                kwargs = {
+                    'Bucket': self.bucket_name,
+                    'ACL': 'private'
+                }
+                if self.env.region != 'us-east-1':
+                    kwargs['CreateBucketConfiguration'] = {
+                        'LocationConstraint': self.env.region
+                    }
+                self.s3_client.create_bucket(**kwargs)
+                self.aws_id = f"arn:aws:s3:::{self.bucket_name}"
+                print(f"  ✓ Neuer Bucket '{new_value}' erstellt")
             else:
-                print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert")
+                print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert: {field}={new_value}")
         except Exception as e:
             print(f"Fehler beim Update des Buckets: {e}")
             raise
@@ -173,7 +199,7 @@ class S3(Resources):
 
     def get_resource_id(self) -> str:
         """Gebe die fachliche resource_id zurück"""
-        return self.bucket_name
+        return self.resource_id
 
     def __repr__(self) -> str:
         return f"S3(bucket='{self.bucket_name}', region='{self.env.region}')"
@@ -191,7 +217,8 @@ app = AwsApp(name="example_1", env=AwsEnviroment(), app_to_tech_id={}, construct
 
 # S3 Bucket erstellen
 s3_bucket = S3(
-    bucket_name="my-example-bucket-testmb-22",
+    resource_id="my-example-bucket-testmb-22",
+    bucket_name="my-example-bucket-testmb-23",
     env=app.env
 )
 app.constructs.append(s3_bucket)

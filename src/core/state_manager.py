@@ -13,7 +13,7 @@ class StateManager:
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
 
     def load_state(self) -> dict:
-        """YAML-Config laden"""
+        """YAML-Config laden - enthält nur Mapping von resource_id -> technical_id"""
         if not self.config_path.exists():
             return {
                 "resources": {},

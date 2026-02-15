@@ -42,45 +42,62 @@ class DiffEngine:
         self.resources = resources
 
     def calculate_diffs(self) -> List[Diff]:
-        """Vergleicht aktuellen State mit desired State"""
+        """Vergleicht desired State (Code) mit actual State (AWS via read())"""
         diffs = []
         state = self.state_manager.load_state()
-        config_resources = state.get("resources", {})
+        mapped_resources = state.get("resources", {})
 
-        # 1. Iterate über alle Ressourcen in Config
-        for resource_id, config_data in config_resources.items():
-            if resource_id not in self.resources:
-                continue
+        # 1. Iterate über alle Ressourcen im Code
+        for resource_id, resource in self.resources.items():
+            # 2. Abrufen ob Ressource bereits getracked ist
+            is_tracked = resource_id in mapped_resources
 
-            resource = self.resources[resource_id]
+            # 3. Gewünschte Properties aus Code-Ressource abrufen
+            desired_properties = {
+                k: v for k, v in resource.__dict__.items()
+                if not k.startswith('_') and k not in ['s3_client', 'env', 'aws_id', 'resource_id']
+            }
 
-            # 2. Aktuellen AWS-State abrufen
+            # 4. Aktuellen State von AWS abrufen via read()
             try:
                 actual_state = resource.read()
             except Exception:
-                # Wenn read() fehlschlägt, nehmen wir an die Ressource existiert nicht
                 actual_state = None
 
-            # 3. Vergleichen
+            # 5. Vergleichen
             if actual_state is None:
-                # Ressource in Config, aber nicht in AWS -> CREATE
-                diffs.append(
-                    Diff(
-                        resource_id=resource_id,
-                        resource_type=config_data.get("resource_type", "Unknown"),
-                        diff_type=DiffType.CREATE
+                # Ressource existiert nicht in AWS mit desired properties
+                if is_tracked:
+                    # War vorher getracked -> UPDATE (Properties wurden geändert, Ressource muss neu erstellt werden)
+                    for prop, desired_val in desired_properties.items():
+                        diffs.append(
+                            Diff(
+                                resource_id=resource_id,
+                                resource_type=resource.__class__.__name__,
+                                diff_type=DiffType.UPDATE,
+                                field=prop,
+                                current_value=None,
+                                desired_value=desired_val
+                            )
+                        )
+                else:
+                    # Ist nicht getracked -> neue Ressource -> CREATE
+                    diffs.append(
+                        Diff(
+                            resource_id=resource_id,
+                            resource_type=resource.__class__.__name__,
+                            diff_type=DiffType.CREATE
+                        )
                     )
-                )
             else:
-                # Eigenschaften vergleichen
-                config_props = config_data.get("properties", {})
-                for prop, desired_val in config_props.items():
+                # Ressource existiert in AWS - vergleiche Properties
+                for prop, desired_val in desired_properties.items():
                     actual_val = actual_state.get(prop)
                     if actual_val != desired_val:
                         diffs.append(
                             Diff(
                                 resource_id=resource_id,
-                                resource_type=config_data.get("resource_type", "Unknown"),
+                                resource_type=resource.__class__.__name__,
                                 diff_type=DiffType.UPDATE,
                                 field=prop,
                                 current_value=actual_val,
@@ -125,11 +142,11 @@ class DiffEngine:
                             "message": f"Created {diff.resource_type} '{diff.resource_id}'"
                         })
                     elif diff.diff_type == DiffType.UPDATE:
-                        resource.update(diff.field, diff.desired_value)
+                        resource.update(diff.field, diff.current_value, diff.desired_value)
                         results["applied"].append({
                             "diff": str(diff),
                             "status": "SUCCESS",
-                            "message": f"Updated {diff.resource_type} '{diff.resource_id}'"
+                            "message": f"Updated {diff.resource_type} '{diff.resource_id}' - {diff.field}: {diff.current_value} -> {diff.desired_value}"
                         })
                     elif diff.diff_type == DiffType.DELETE:
                         resource.delete(diff.resource_id)

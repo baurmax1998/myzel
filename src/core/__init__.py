@@ -37,7 +37,6 @@ def deploy(
         # Erstelle ein Dict mit Ressourcen für die DiffEngine
         # resource_id wird von der Ressource selbst bereitgestellt
         resources_dict = {}
-        resource_ids = {}
         for construct in app.constructs:
             try:
                 resource_id = construct.get_resource_id()
@@ -45,21 +44,25 @@ def deploy(
                 # Fallback auf Index falls get_resource_id nicht implementiert
                 resource_id = str(len(resources_dict))
             resources_dict[resource_id] = construct
-            resource_ids[resource_id] = resource_id
 
-        # Lade aktuellen State
+        # Lade aktuellen State - enthält Mapping von resource_id -> technical_id
         state = state_manager.load_state()
-        if "resources" not in state or not state["resources"]:
-            # Falls State leer ist, alle Ressourcen als CREATE markieren
-            for resource_id, resource in resources_dict.items():
-                if "resources" not in state:
-                    state["resources"] = {}
+        if "resources" not in state:
+            state["resources"] = {}
+
+        # Synchronisiere neue Ressourcen in den State (nur wenn sie nicht existieren)
+        # State speichert: resource_id, technical_id, resource_type
+        for resource_id, resource in resources_dict.items():
+            if resource_id not in state["resources"]:
+                # Neue Ressource - initialisiere das Mapping
+                # technical_id wird später aktualisiert nach create/update
                 state["resources"][resource_id] = {
-                    "resource_type": resource.__class__.__name__,
                     "resource_id": resource_id,
-                    "properties": {}
+                    "technical_id": None,
+                    "resource_type": resource.__class__.__name__
                 }
-            state_manager.save_state(state)
+
+        state_manager.save_state(state)
 
         # Initialisiere DiffEngine
         diff_engine = DiffEngine(state_manager, resources_dict)
@@ -105,7 +108,7 @@ def deploy(
         if not dry_run and apply_results["applied"]:
             state = state_manager.load_state()
 
-            # Aktualisiere Ressourcen im State
+            # Aktualisiere Ressourcen im State - speichere Mapping
             if "resources" not in state:
                 state["resources"] = {}
 
@@ -115,16 +118,13 @@ def deploy(
                 except (AttributeError, NotImplementedError):
                     resource_id = str(app.constructs.index(construct))
 
+                # Speichere Mapping: resource_id, technical_id, resource_type
+                technical_id = getattr(construct, 'bucket_name', None) or getattr(construct, 'aws_id', None)
+
                 state["resources"][resource_id] = {
-                    "resource_type": construct.__class__.__name__,
                     "resource_id": resource_id,
-                    "aws_id": getattr(construct, 'aws_id', None),
-                    "properties": {
-                        k: v for k, v in construct.__dict__.items()
-                        if not k.startswith('_') and k not in ['s3_client', 'env', 'aws_id']
-                    },
-                    "created_at": datetime.now().isoformat(),
-                    "last_modified": datetime.now().isoformat()
+                    "technical_id": technical_id,
+                    "resource_type": construct.__class__.__name__
                 }
 
             # Erhöhe Version
