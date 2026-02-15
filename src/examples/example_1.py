@@ -28,6 +28,11 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
+    def get_resource_id(self) -> str:
+        """Gebe eine fachliche resource_id zurück (z.B. bucket_name für S3)"""
+        pass
+
+    @abstractmethod
     def create(self) -> str:
         pass
 
@@ -165,6 +170,10 @@ class S3(Resources):
         except Exception as e:
             print(f"Fehler beim Löschen des Buckets: {e}")
             raise
+
+    def get_resource_id(self) -> str:
+        """Gebe die fachliche resource_id zurück"""
+        return self.bucket_name
 
     def __repr__(self) -> str:
         return f"S3(bucket='{self.bucket_name}', region='{self.env.region}')"

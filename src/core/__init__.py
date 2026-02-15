@@ -35,7 +35,17 @@ def deploy(
         state_manager = StateManager(config_file)
 
         # Erstelle ein Dict mit Ressourcen für die DiffEngine
-        resources_dict = {str(i): construct for i, construct in enumerate(app.constructs)}
+        # resource_id wird von der Ressource selbst bereitgestellt
+        resources_dict = {}
+        resource_ids = {}
+        for construct in app.constructs:
+            try:
+                resource_id = construct.get_resource_id()
+            except (AttributeError, NotImplementedError):
+                # Fallback auf Index falls get_resource_id nicht implementiert
+                resource_id = str(len(resources_dict))
+            resources_dict[resource_id] = construct
+            resource_ids[resource_id] = resource_id
 
         # Lade aktuellen State
         state = state_manager.load_state()
@@ -99,8 +109,12 @@ def deploy(
             if "resources" not in state:
                 state["resources"] = {}
 
-            for i, construct in enumerate(app.constructs):
-                resource_id = str(i)
+            for construct in app.constructs:
+                try:
+                    resource_id = construct.get_resource_id()
+                except (AttributeError, NotImplementedError):
+                    resource_id = str(app.constructs.index(construct))
+
                 state["resources"][resource_id] = {
                     "resource_type": construct.__class__.__name__,
                     "resource_id": resource_id,
