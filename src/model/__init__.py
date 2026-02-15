@@ -12,5 +12,4 @@ class AwsEnviroment:
 class AwsApp:
     name: str
     env: AwsEnviroment
-    app_to_tech_id: dict
     constructs: list

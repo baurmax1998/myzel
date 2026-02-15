@@ -5,7 +5,7 @@ from src.resources.s3 import S3
 
 
 
-app = AwsApp(name="example_1", env=AwsEnviroment(), app_to_tech_id={}, constructs=[])
+app = AwsApp(name="example_1", env=AwsEnviroment(), constructs=[])
 
 
 # S3 Bucket erstellen
