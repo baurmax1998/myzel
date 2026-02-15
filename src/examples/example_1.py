@@ -27,11 +27,11 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
-    def create(self):
+    def create(self) -> str:
         pass
 
     @abstractmethod
-    def update(self):
+    def update(self, tech_id: str):
         pass
 
     @abstractmethod
@@ -45,17 +45,9 @@ class S3(Resources):
     def __init__(
         self,
         bucket_name: str,
-        env: AwsEnviroment,
-        acl: str = "private",
-        versioning: bool = False,
-        encryption: bool = False,
-        public_access_block: bool = True
+        env: AwsEnviroment
     ):
         self.bucket_name = bucket_name
-        self.acl = acl
-        self.versioning = versioning
-        self.encryption = encryption
-        self.public_access_block = public_access_block
         self.env = env
         self.s3_client = boto3.session.Session(
             profile_name=env.profile,
@@ -94,28 +86,21 @@ class S3(Resources):
             # Prüfe ob Bucket existiert
             s3_client.head_bucket(Bucket=tech_id)
 
-            # Hole Bucket Konfiguration
-            versioning = s3_client.get_bucket_versioning(Bucket=tech_id)
-            encryption = s3_client.get_bucket_encryption(Bucket=tech_id) if tech_id else None
-            acl = s3_client.get_bucket_acl(Bucket=tech_id)
 
             return cls(
                 bucket_name=tech_id,
                 env=env,
-                acl=acl.get('Owner', {}).get('ID', 'private'),
-                versioning=versioning.get('Status') == 'Enabled',
-                encryption=encryption is not None
             )
         except Exception as e:
             print(f"Fehler beim Abrufen des Buckets {tech_id}: {e}")
             raise
 
-    def create(self):
-        """Erstelle einen neuen S3 Bucket"""
+    def create(self) -> str:
+        """Erstelle einen neuen S3 Bucket und gebe die ARN zurück"""
         try:
             kwargs = {
                 'Bucket': self.bucket_name,
-                'ACL': self.acl
+                'ACL': 'private'
             }
 
             if self.env.region != 'us-east-1':
@@ -125,79 +110,17 @@ class S3(Resources):
 
             self.s3_client.create_bucket(**kwargs)
 
-            # Versioning aktivieren wenn konfiguriert
-            if self.versioning:
-                self.s3_client.put_bucket_versioning(
-                    Bucket=self.bucket_name,
-                    VersioningConfiguration={'Status': 'Enabled'}
-                )
-
-            # Server-side encryption aktivieren wenn konfiguriert
-            if self.encryption:
-                self.s3_client.put_bucket_encryption(
-                    Bucket=self.bucket_name,
-                    ServerSideEncryptionConfiguration={
-                        'Rules': [{
-                            'ApplyServerSideEncryptionByDefault': {
-                                'SSEAlgorithm': 'AES256'
-                            }
-                        }]
-                    }
-                )
-
-            # Public Access Block wenn konfiguriert
-            if self.public_access_block:
-                self.s3_client.put_public_access_block(
-                    Bucket=self.bucket_name,
-                    PublicAccessBlockConfiguration={
-                        'BlockPublicAcls': True,
-                        'IgnorePublicAcls': True,
-                        'BlockPublicPolicy': True,
-                        'RestrictPublicBuckets': True
-                    }
-                )
-
+            arn = f"arn:aws:s3:::{self.bucket_name}"
             print(f"S3 Bucket '{self.bucket_name}' erfolgreich erstellt")
+            return arn
         except Exception as e:
             print(f"Fehler beim Erstellen des Buckets: {e}")
             raise
 
-    def update(self):
+    def update(self, tech_id: str):
         """Update die S3 Bucket Konfiguration"""
         try:
-            # Versioning Update
-            self.s3_client.put_bucket_versioning(
-                Bucket=self.bucket_name,
-                VersioningConfiguration={
-                    'Status': 'Enabled' if self.versioning else 'Suspended'
-                }
-            )
-
-            # Encryption Update
-            if self.encryption:
-                self.s3_client.put_bucket_encryption(
-                    Bucket=self.bucket_name,
-                    ServerSideEncryptionConfiguration={
-                        'Rules': [{
-                            'ApplyServerSideEncryptionByDefault': {
-                                'SSEAlgorithm': 'AES256'
-                            }
-                        }]
-                    }
-                )
-
-            # Public Access Block Update
-            self.s3_client.put_public_access_block(
-                Bucket=self.bucket_name,
-                PublicAccessBlockConfiguration={
-                    'BlockPublicAcls': self.public_access_block,
-                    'IgnorePublicAcls': self.public_access_block,
-                    'BlockPublicPolicy': self.public_access_block,
-                    'RestrictPublicBuckets': self.public_access_block
-                }
-            )
-
-            print(f"S3 Bucket '{self.bucket_name}' erfolgreich aktualisiert")
+            print(f"S3 Bucket '{self.bucket_name}' wird aktualisiert")
         except Exception as e:
             print(f"Fehler beim Update des Buckets: {e}")
             raise
@@ -243,13 +166,10 @@ print("s3_elements")
 # S3 Bucket erstellen
 s3_bucket = S3(
     bucket_name="my-example-bucket-testmb",
-    env=app.env,
-    acl="private",
-    versioning=True,
-    encryption=True,
-    public_access_block=True
+    env=app.env
 )
-s3_bucket.create()
+arn = s3_bucket.create()
+print(f"Erstellte ARN: {arn}")
 
 
 
