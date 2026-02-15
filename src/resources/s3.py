@@ -1,3 +1,8 @@
+import boto3
+
+from src.resources import Resources
+from src.model import AwsEnviroment
+
 
 class S3(Resources):
     """S3 Resource für AWS Bucket Management"""

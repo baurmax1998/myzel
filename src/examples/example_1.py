@@ -1,10 +1,6 @@
-from dataclasses import dataclass
-
-from abc import ABC, abstractmethod
-from typing import TypeVar, Type
-import boto3
-from botocore.session import Session
 from src.core import deploy
+from src.model import AwsEnviroment, AwsApp
+from src.resources.s3 import S3
 
 
 
