@@ -35,7 +35,7 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
-    def delete(self):
+    def delete(self, tech_id: str):
         pass
 
 
@@ -125,7 +125,7 @@ class S3(Resources):
             print(f"Fehler beim Update des Buckets: {e}")
             raise
 
-    def delete(self):
+    def delete(self, tech_id: str):
         """Lösche den S3 Bucket und alle Objekte darin"""
         try:
             # Lösche alle Objekte im Bucket
