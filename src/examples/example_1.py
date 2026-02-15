@@ -160,16 +160,16 @@ class AwsApp:
 
 app = AwsApp(name="example_1", env=AwsEnviroment(), app_to_tech_id={}, constructs=[])
 
-s3_elements = S3.list(app.env)
-print("s3_elements")
 
 # S3 Bucket erstellen
 s3_bucket = S3(
     bucket_name="my-example-bucket-testmb",
     env=app.env
 )
-arn = s3_bucket.create()
-print(f"Erstellte ARN: {arn}")
+app.constructs.append(s3_bucket)
+
+deploy(app)
+
 
 
 
