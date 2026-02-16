@@ -1,33 +1,9 @@
 from pathlib import Path
-from typing import Dict
-import yaml
-from pydantic import BaseModel, Field, ValidationError
 
-from src.model import AwsApp, Resources
+from pydantic import ValidationError
+
+from src.model import AwsApp, Resources, IacMapping, ResourceMapping
 from src.resources.s3 import S3
-
-
-class ResourceMapping(BaseModel):
-    type: str = Field(..., min_length=1)
-    tech_id: str = Field(..., min_length=1)
-
-
-class IacMapping(BaseModel):
-    resources: Dict[str, ResourceMapping] = Field(default_factory=dict)
-
-    @classmethod
-    def from_yaml(cls, path: Path) -> "IacMapping":
-        if not path.exists():
-            return cls()
-
-        with path.open() as f:
-            data = yaml.safe_load(f) or {}
-
-        return cls.model_validate(data)
-
-    def to_yaml(self, path: Path) -> None:
-        with path.open("w") as f:
-            yaml.safe_dump(self.model_dump(), f, sort_keys=False)
 
 
 def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:

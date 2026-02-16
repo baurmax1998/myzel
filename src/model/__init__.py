@@ -1,6 +1,11 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import TypeVar, Type
+from pathlib import Path
+from typing import TypeVar, Type, Dict
+
+import yaml
+from pydantic import BaseModel, Field
+
 
 @dataclass
 class AwsEnviroment:
@@ -42,3 +47,27 @@ class AwsApp:
     name: str
     env: AwsEnviroment
     constructs: dict[str, Resources]
+
+
+
+class ResourceMapping(BaseModel):
+    type: str = Field(..., min_length=1)
+    tech_id: str = Field(..., min_length=1)
+
+
+class IacMapping(BaseModel):
+    resources: Dict[str, ResourceMapping] = Field(default_factory=dict)
+
+    @classmethod
+    def from_yaml(cls, path: Path) -> "IacMapping":
+        if not path.exists():
+            return cls()
+
+        with path.open() as f:
+            data = yaml.safe_load(f) or {}
+
+        return cls.model_validate(data)
+
+    def to_yaml(self, path: Path) -> None:
+        with path.open("w") as f:
+            yaml.safe_dump(self.model_dump(), f, sort_keys=False)
