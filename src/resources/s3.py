@@ -1,8 +1,10 @@
 import boto3
 
 from src.model import AwsEnviroment, Resources
+from src.model.registry import register_resource
 
 
+@register_resource("s3")
 class S3(Resources):
     """S3 Resource für AWS Bucket Management"""
 

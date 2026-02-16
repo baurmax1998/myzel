@@ -1,12 +1,9 @@
 from pathlib import Path
 
-import yaml
 from pydantic import ValidationError
 
-from src.model import AwsApp, Resources, IacMapping, ResourceMapping
-from src.resources.s3 import S3
-
-
+from src.model import AwsApp, Resources, IacMapping, ResourceMapping, DiffResult
+from src.model.registry import get_resource_class, get_resource_type
 
 
 def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:
@@ -22,8 +19,9 @@ def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:
     for resource_id in iac_mapping.resources:
         resource_mapping = iac_mapping.resources[resource_id]
         resource_type = resource_mapping.type
-        if resource_type == "s3":
-            resource = S3.get(resource_mapping.tech_id, app.env)
+        resource_class = get_resource_class(resource_type)
+        if resource_class:
+            resource = resource_class.get(resource_mapping.tech_id, app.env)
             deployed_constructs[resource_id] = resource
 
     desired_constructs: dict[str, Resources] = app.constructs
@@ -33,8 +31,7 @@ def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:
     for resource_id, resource in desired_constructs.items():
         if resource_id not in deployed_constructs:
             tech_id = resource.create()
-            # Bestimme den Ressourcentyp
-            resource_type = "s3" if isinstance(resource, S3) else "unknown"
+            resource_type = get_resource_type(resource)
             desired_iac_mapping.resources[resource_id] = ResourceMapping(
                 type=resource_type,
                 tech_id=tech_id
@@ -48,7 +45,7 @@ def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:
             if desired != deployed:
                 new_id = deployed.update(tech_id, desired)
                 tech_id = new_id if new_id is not None else tech_id
-            resource_type = "s3" if isinstance(deployed, S3) else "unknown"
+            resource_type = get_resource_type(deployed)
             desired_iac_mapping.resources[resource_id] = ResourceMapping(
                 type=resource_type,
                 tech_id=tech_id
@@ -80,8 +77,9 @@ def destroy(app: AwsApp, config_dir: Path = Path("config")) -> None:
         resource_type = resource_mapping.type
         tech_id = resource_mapping.tech_id
 
-        if resource_type == "s3":
-            resource = S3.get(tech_id, app.env)
+        resource_class = get_resource_class(resource_type)
+        if resource_class:
+            resource = resource_class.get(tech_id, app.env)
             resource.delete(tech_id)
 
     # Leere die Config
@@ -89,7 +87,7 @@ def destroy(app: AwsApp, config_dir: Path = Path("config")) -> None:
     empty_mapping.to_yaml(config_file)
 
 
-def diff(app: AwsApp, config_dir: Path = Path("config")) -> DiffResult:
+def diff(app: AwsApp, config_dir: Path = Path("config")) -> "DiffResult":
     config_dir.mkdir(parents=True, exist_ok=True)
     config_file = config_dir / f"app_{app.name}.yaml"
 
@@ -102,8 +100,9 @@ def diff(app: AwsApp, config_dir: Path = Path("config")) -> DiffResult:
     for resource_id in iac_mapping.resources:
         resource_mapping = iac_mapping.resources[resource_id]
         resource_type = resource_mapping.type
-        if resource_type == "s3":
-            resource = S3.get(resource_mapping.tech_id, app.env)
+        resource_class = get_resource_class(resource_type)
+        if resource_class:
+            resource = resource_class.get(resource_mapping.tech_id, app.env)
             deployed_constructs[resource_id] = resource
 
     desired_constructs: dict[str, Resources] = app.constructs
