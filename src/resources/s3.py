@@ -145,6 +145,7 @@ class S3(Resources):
 
     def delete(self, tech_id: str):
         """Lösche einen S3 Bucket"""
+        bucket_name = self._extract_bucket_name(tech_id)
         session = boto3.session.Session(
             profile_name=self.env.profile,
             region_name=self.env.region
@@ -152,8 +153,8 @@ class S3(Resources):
         s3_client = session.client('s3')
 
         try:
-            s3_client.delete_bucket(Bucket=tech_id)
-            print(f"S3 Bucket '{tech_id}' erfolgreich gelöscht")
+            s3_client.delete_bucket(Bucket=bucket_name)
+            print(f"S3 Bucket '{bucket_name}' erfolgreich gelöscht")
         except Exception as e:
             print(f"Fehler beim Löschen des Buckets: {e}")
             raise

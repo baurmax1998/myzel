@@ -1,4 +1,4 @@
 resources:
   my-example-bucket-testmb-22:
     type: s3
-    tech_id: arn:aws:s3:::my-example-bucket-testmb-22
+    tech_id: arn:aws:s3:::my-example-bucket-testmb-23

@@ -1,4 +1,4 @@
-from src.core import deploy, diff
+from src.core import deploy, diff, destroy
 from src.model import AwsEnviroment, AwsApp
 from src.resources.s3 import S3
 
@@ -11,7 +11,7 @@ app.constructs["my-example-bucket-testmb-22"] = S3(
     env=app.env
 )
 
-diff(app)
+deploy(app)
 
 
 
