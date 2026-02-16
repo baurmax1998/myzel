@@ -77,43 +77,44 @@ class S3(Resources):
 
     def update(self, deployed_tech_id: str, new_value: 'S3') -> str:
         """Update S3 Bucket - Erstelle neuen Bucket, sync Inhalte und lösche alten"""
-        deployed_bucket_name = self._extract_bucket_name(deployed_tech_id) if deployed_tech_id else None
+        deployed_bucket_name = self._extract_bucket_name(deployed_tech_id)
+        new_bucket_name = new_value.bucket_name
 
-        if deployed_bucket_name == self.bucket_name:
-            print(f"S3 Bucket '{self.bucket_name}' ist bereits aktuell")
-            arn = f"arn:aws:s3:::{self.bucket_name}"
+        if deployed_bucket_name == new_bucket_name:
+            print(f"S3 Bucket '{deployed_bucket_name}' ist bereits aktuell")
+            arn = f"arn:aws:s3:::{deployed_bucket_name}"
             return arn
 
         session = boto3.session.Session(
-            profile_name=self.env.profile,
-            region_name=self.env.region
+            profile_name=new_value.env.profile,
+            region_name=new_value.env.region
         )
         s3_client = session.client('s3')
 
         try:
             # 1. Neuen Bucket erstellen, falls er nicht existiert
             try:
-                s3_client.head_bucket(Bucket=self.bucket_name)
-                print(f"S3 Bucket '{self.bucket_name}' existiert bereits")
+                s3_client.head_bucket(Bucket=new_bucket_name)
+                print(f"S3 Bucket '{new_bucket_name}' existiert bereits")
             except:
-                print(f"Erstelle neuen S3 Bucket '{self.bucket_name}'")
-                if self.env.region == 'us-east-1':
-                    s3_client.create_bucket(Bucket=self.bucket_name)
+                print(f"Erstelle neuen S3 Bucket '{new_bucket_name}'")
+                if new_value.env.region == 'us-east-1':
+                    s3_client.create_bucket(Bucket=new_bucket_name)
                 else:
                     s3_client.create_bucket(
-                        Bucket=self.bucket_name,
-                        CreateBucketConfiguration={'LocationConstraint': self.env.region}
+                        Bucket=new_bucket_name,
+                        CreateBucketConfiguration={'LocationConstraint': new_value.env.region}
                     )
 
             # 2. Prüfe ob neuer Bucket leer ist
-            response = s3_client.list_objects_v2(Bucket=self.bucket_name)
+            response = s3_client.list_objects_v2(Bucket=new_bucket_name)
             if response.get('Contents'):
-                print(f"Fehler: S3 Bucket '{self.bucket_name}' ist nicht leer")
-                raise Exception(f"Ziel-Bucket '{self.bucket_name}' ist nicht leer")
+                print(f"Fehler: S3 Bucket '{new_bucket_name}' ist nicht leer")
+                raise Exception(f"Ziel-Bucket '{new_bucket_name}' ist nicht leer")
 
             # 3. Sync Inhalte vom alten zum neuen Bucket
             if deployed_bucket_name:
-                print(f"Synce Inhalte von '{deployed_bucket_name}' zu '{self.bucket_name}'")
+                print(f"Synce Inhalte von '{deployed_bucket_name}' zu '{new_bucket_name}'")
                 paginator = s3_client.get_paginator('list_objects_v2')
                 pages = paginator.paginate(Bucket=deployed_bucket_name)
 
@@ -122,7 +123,7 @@ class S3(Resources):
                         for obj in page['Contents']:
                             key = obj['Key']
                             copy_source = {'Bucket': deployed_bucket_name, 'Key': key}
-                            s3_client.copy_object(CopySource=copy_source, Bucket=self.bucket_name, Key=key)
+                            s3_client.copy_object(CopySource=copy_source, Bucket=new_bucket_name, Key=key)
                             print(f"  Kopiert: {key}")
 
             # 4. Lösche alten Bucket
@@ -130,8 +131,8 @@ class S3(Resources):
                 print(f"Lösche alten S3 Bucket '{deployed_bucket_name}'")
                 s3_client.delete_bucket(Bucket=deployed_bucket_name)
 
-            arn = f"arn:aws:s3:::{self.bucket_name}"
-            print(f"S3 Bucket erfolgreich von '{deployed_bucket_name}' zu '{self.bucket_name}' migriert")
+            arn = f"arn:aws:s3:::{new_bucket_name}"
+            print(f"S3 Bucket erfolgreich von '{deployed_bucket_name}' zu '{new_bucket_name}' migriert")
             return arn
 
         except Exception as e:
