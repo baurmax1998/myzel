@@ -1,11 +1,9 @@
-
 from abc import ABC, abstractmethod
 from typing import TypeVar, Type
 
 from src.model import AwsEnviroment
 
 T = TypeVar('T', bound='Resources')
-
 
 
 class Resources(ABC):  # Interface
@@ -25,7 +23,7 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
-    def update(self, field: str = None, old_value: str = None, new_value: str = None, old_technical_id: str = None):
+    def update(self, deployed_tech_id: str = None, new_value: T = None) -> str:
         pass
 
     @abstractmethod
