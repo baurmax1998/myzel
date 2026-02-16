@@ -3,8 +3,7 @@ from typing import Dict
 import yaml
 from pydantic import BaseModel, Field, ValidationError
 
-from src.model import AwsApp
-from src.resources import Resources
+from src.model import AwsApp, Resources
 from src.resources.s3 import S3
 
 
@@ -80,7 +79,8 @@ def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:
     # 3. Nur in deployed (zu löschende Ressourcen - DELETE)
     for resource_id, resource in deployed_constructs.items():
         if resource_id not in desired_constructs:
-            resource.delete()
+            tech_id = iac_mapping.resources[resource_id].tech_id
+            resource.delete(tech_id)
 
-    iac_mapping.to_yaml(config_file)
+    desired_iac_mapping.to_yaml(config_file)
     return iac_mapping

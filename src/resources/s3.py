@@ -1,7 +1,6 @@
 import boto3
 
-from src.resources import Resources
-from src.model import AwsEnviroment
+from src.model import AwsEnviroment, Resources
 
 
 class S3(Resources):
