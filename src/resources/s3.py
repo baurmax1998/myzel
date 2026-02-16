@@ -9,11 +9,9 @@ class S3(Resources):
 
     def __init__(
         self,
-        resource_id: str,
         bucket_name: str,
         env: AwsEnviroment
     ):
-        self.resource_id = resource_id
         self.bucket_name = bucket_name
         self.env = env
         self.aws_id = None
@@ -36,7 +34,7 @@ class S3(Resources):
             buckets = []
             for bucket in response.get('Buckets', []):
                 bucket_name = bucket['Name']
-                buckets.append(cls(resource_id=bucket_name, bucket_name=bucket_name, env=env))
+                buckets.append(cls(bucket_name=bucket_name, env=env))
             return buckets
         except Exception as e:
             print(f"Fehler beim Auflisten der Buckets: {e}")
@@ -56,7 +54,6 @@ class S3(Resources):
             s3_client.head_bucket(Bucket=tech_id)
 
             return cls(
-                resource_id=tech_id,
                 bucket_name=tech_id,
                 env=env,
             )
@@ -156,10 +153,6 @@ class S3(Resources):
         except Exception as e:
             print(f"Fehler beim Löschen des Buckets: {e}")
             raise
-
-    def get_resource_id(self) -> str:
-        """Gebe die fachliche resource_id zurück"""
-        return self.resource_id
 
     def __repr__(self) -> str:
         return f"S3(bucket='{self.bucket_name}', region='{self.env.region}')"

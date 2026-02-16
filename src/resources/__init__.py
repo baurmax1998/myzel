@@ -21,11 +21,6 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
-    def get_resource_id(self) -> str:
-        """Gebe eine fachliche resource_id zurück (z.B. bucket_name für S3)"""
-        pass
-
-    @abstractmethod
     def create(self) -> str:
         pass
 

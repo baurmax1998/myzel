@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from src.resources import Resources
+
 
 @dataclass
 class AwsEnviroment:
@@ -12,4 +14,4 @@ class AwsEnviroment:
 class AwsApp:
     name: str
     env: AwsEnviroment
-    constructs: list
+    constructs: dict[str, Resources]
