@@ -10,6 +10,7 @@ dependencies = [
     "boto3>=1.26.0",
     "pyyaml>=6.0",
     "packaging>=21.0",
+    "pydantic>=2.12.5",
 ]
 
 
