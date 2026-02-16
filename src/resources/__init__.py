@@ -23,7 +23,7 @@ class Resources(ABC):  # Interface
         pass
 
     @abstractmethod
-    def update(self, deployed_tech_id: str = None, new_value: T = None) -> str:
+    def update(self, deployed_tech_id: str, new_value: T) -> str:
         pass
 
     @abstractmethod

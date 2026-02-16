@@ -75,17 +75,68 @@ class S3(Resources):
             print(f"Fehler beim Erstellen des Buckets: {e}")
             raise
 
-    def update(self, deployed_tech_id: str = None, new_value: 'S3' = None) -> str:
-        """Update S3 Bucket Konfiguration"""
+    def update(self, deployed_tech_id: str, new_value: 'S3') -> str:
+        """Update S3 Bucket - Erstelle neuen Bucket, sync Inhalte und lösche alten"""
         deployed_bucket_name = self._extract_bucket_name(deployed_tech_id) if deployed_tech_id else None
 
-        if deployed_bucket_name and deployed_bucket_name != self.bucket_name:
-            print(f"Bucket-Umbenennungen werden nicht unterstützt (von '{deployed_bucket_name}' zu '{self.bucket_name}')")
-            return deployed_tech_id
+        if deployed_bucket_name == self.bucket_name:
+            print(f"S3 Bucket '{self.bucket_name}' ist bereits aktuell")
+            arn = f"arn:aws:s3:::{self.bucket_name}"
+            return arn
 
-        arn = f"arn:aws:s3:::{self.bucket_name}"
-        print(f"S3 Bucket '{self.bucket_name}' ist bereits aktuell")
-        return arn
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        s3_client = session.client('s3')
+
+        try:
+            # 1. Neuen Bucket erstellen, falls er nicht existiert
+            try:
+                s3_client.head_bucket(Bucket=self.bucket_name)
+                print(f"S3 Bucket '{self.bucket_name}' existiert bereits")
+            except:
+                print(f"Erstelle neuen S3 Bucket '{self.bucket_name}'")
+                if self.env.region == 'us-east-1':
+                    s3_client.create_bucket(Bucket=self.bucket_name)
+                else:
+                    s3_client.create_bucket(
+                        Bucket=self.bucket_name,
+                        CreateBucketConfiguration={'LocationConstraint': self.env.region}
+                    )
+
+            # 2. Prüfe ob neuer Bucket leer ist
+            response = s3_client.list_objects_v2(Bucket=self.bucket_name)
+            if response.get('Contents'):
+                print(f"Fehler: S3 Bucket '{self.bucket_name}' ist nicht leer")
+                raise Exception(f"Ziel-Bucket '{self.bucket_name}' ist nicht leer")
+
+            # 3. Sync Inhalte vom alten zum neuen Bucket
+            if deployed_bucket_name:
+                print(f"Synce Inhalte von '{deployed_bucket_name}' zu '{self.bucket_name}'")
+                paginator = s3_client.get_paginator('list_objects_v2')
+                pages = paginator.paginate(Bucket=deployed_bucket_name)
+
+                for page in pages:
+                    if 'Contents' in page:
+                        for obj in page['Contents']:
+                            key = obj['Key']
+                            copy_source = {'Bucket': deployed_bucket_name, 'Key': key}
+                            s3_client.copy_object(CopySource=copy_source, Bucket=self.bucket_name, Key=key)
+                            print(f"  Kopiert: {key}")
+
+            # 4. Lösche alten Bucket
+            if deployed_bucket_name:
+                print(f"Lösche alten S3 Bucket '{deployed_bucket_name}'")
+                s3_client.delete_bucket(Bucket=deployed_bucket_name)
+
+            arn = f"arn:aws:s3:::{self.bucket_name}"
+            print(f"S3 Bucket erfolgreich von '{deployed_bucket_name}' zu '{self.bucket_name}' migriert")
+            return arn
+
+        except Exception as e:
+            print(f"Fehler beim Update des Buckets: {e}")
+            raise
 
     def delete(self, tech_id: str):
         """Lösche einen S3 Bucket"""
