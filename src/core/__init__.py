@@ -7,24 +7,6 @@ from src.model import AwsApp, Resources, IacMapping, ResourceMapping
 from src.resources.s3 import S3
 
 
-class DiffResult:
-    def __init__(self):
-        self.create: dict[str, Resources] = {}
-        self.update: dict[str, tuple[Resources, Resources]] = {}
-        self.delete: dict[str, Resources] = {}
-
-    def to_yaml_str(self) -> str:
-        """Konvertiere DiffResult zu YAML String"""
-        data = {
-            "create": {resource_id: str(resource) for resource_id, resource in self.create.items()},
-            "update": {resource_id: {"old": str(old), "new": str(new)} for resource_id, (old, new) in self.update.items()},
-            "delete": {resource_id: str(resource) for resource_id, resource in self.delete.items()}
-        }
-        return yaml.dump(data, default_flow_style=False, sort_keys=False)
-
-    def print(self) -> None:
-        """Gebe DiffResult als YAML aus"""
-        print(self.to_yaml_str())
 
 
 def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:

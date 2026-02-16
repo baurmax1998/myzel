@@ -71,3 +71,24 @@ class IacMapping(BaseModel):
     def to_yaml(self, path: Path) -> None:
         with path.open("w") as f:
             yaml.safe_dump(self.model_dump(), f, sort_keys=False)
+
+
+
+class DiffResult:
+    def __init__(self):
+        self.create: dict[str, Resources] = {}
+        self.update: dict[str, tuple[Resources, Resources]] = {}
+        self.delete: dict[str, Resources] = {}
+
+    def to_yaml_str(self) -> str:
+        """Konvertiere DiffResult zu YAML String"""
+        data = {
+            "create": {resource_id: str(resource) for resource_id, resource in self.create.items()},
+            "update": {resource_id: {"old": str(old), "new": str(new)} for resource_id, (old, new) in self.update.items()},
+            "delete": {resource_id: str(resource) for resource_id, resource in self.delete.items()}
+        }
+        return yaml.dump(data, default_flow_style=False, sort_keys=False)
+
+    def print(self) -> None:
+        """Gebe DiffResult als YAML aus"""
+        print(self.to_yaml_str())
