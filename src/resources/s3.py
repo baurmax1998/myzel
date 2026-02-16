@@ -53,7 +53,7 @@ class S3(Resources):
             raise
 
     def create(self) -> str:
-        """Erstelle einen neuen S3 Bucket"""
+        """Erstelle einen neuen S3 Bucket oder nutze existierenden"""
         session = boto3.session.Session(
             profile_name=self.env.profile,
             region_name=self.env.region
@@ -61,14 +61,18 @@ class S3(Resources):
         s3_client = session.client('s3')
 
         try:
-            if self.env.region == 'us-east-1':
-                s3_client.create_bucket(Bucket=self.bucket_name)
+            if self._bucket_exists(self.bucket_name, s3_client):
+                print(f"S3 Bucket '{self.bucket_name}' existiert bereits")
             else:
-                s3_client.create_bucket(
-                    Bucket=self.bucket_name,
-                    CreateBucketConfiguration={'LocationConstraint': self.env.region}
-                )
-            print(f"S3 Bucket '{self.bucket_name}' erfolgreich erstellt")
+                if self.env.region == 'us-east-1':
+                    s3_client.create_bucket(Bucket=self.bucket_name)
+                else:
+                    s3_client.create_bucket(
+                        Bucket=self.bucket_name,
+                        CreateBucketConfiguration={'LocationConstraint': self.env.region}
+                    )
+                print(f"S3 Bucket '{self.bucket_name}' erfolgreich erstellt")
+
             arn = f"arn:aws:s3:::{self.bucket_name}"
             return arn
         except Exception as e:
@@ -93,10 +97,9 @@ class S3(Resources):
 
         try:
             # 1. Neuen Bucket erstellen, falls er nicht existiert
-            try:
-                s3_client.head_bucket(Bucket=new_bucket_name)
+            if new_value._bucket_exists(new_bucket_name, s3_client):
                 print(f"S3 Bucket '{new_bucket_name}' existiert bereits")
-            except:
+            else:
                 print(f"Erstelle neuen S3 Bucket '{new_bucket_name}'")
                 if new_value.env.region == 'us-east-1':
                     s3_client.create_bucket(Bucket=new_bucket_name)
@@ -160,6 +163,14 @@ class S3(Resources):
         Format: arn:aws:s3:::bucket-name
         """
         return arn.split(':::')[-1]
+
+    def _bucket_exists(self, bucket_name: str, s3_client) -> bool:
+        """Prüfe ob ein Bucket existiert"""
+        try:
+            s3_client.head_bucket(Bucket=bucket_name)
+            return True
+        except:
+            return False
 
     def __repr__(self) -> str:
         return f"S3(bucket='{self.bucket_name}')"
