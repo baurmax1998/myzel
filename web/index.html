@@ -46,7 +46,10 @@
             background: black;
             padding: 60px 40px;
             border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            box-shadow:
+                0 0 40px rgba(150, 180, 50, 0.4),
+                0 0 80px rgba(150, 180, 50, 0.2),
+                0 8px 20px rgba(0, 0, 0, 0.15);
             animation: slideIn 0.6s ease-out;
             position: relative;
             z-index: 1;
@@ -54,12 +57,16 @@
 
         h1 {
             font-size: 3.5em;
-            color: #333;
+            color: #96b432;
             margin-bottom: 20px;
             background: linear-gradient(135deg, #4a5f1f 0%, #3a4a20 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-shadow:
+                0 0 10px rgba(150, 180, 50, 0.5),
+                0 0 20px rgba(150, 180, 50, 0.2);
+            filter: drop-shadow(0 0 5px rgba(150, 180, 50, 0.3));
         }
 
         p {
