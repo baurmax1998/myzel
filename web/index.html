@@ -14,6 +14,7 @@
         body {
             min-height: 100vh;
             background:
+                radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(150, 180, 50, 1) 0%, rgba(120, 160, 40, 0.7) 3%, rgba(107, 142, 35, 0.3) 8%, transparent 15%),
                 radial-gradient(circle at 20% 50%, rgba(74, 95, 31, 0.3) 0%, transparent 50%),
                 radial-gradient(circle at 80% 80%, rgba(58, 74, 32, 0.3) 0%, transparent 50%),
                 linear-gradient(135deg, #4a5f1f 0%, #3a4a20 100%);
@@ -32,9 +33,12 @@
             right: 0;
             bottom: 0;
             background-image:
-                repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px),
-                repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(255, 255, 255, 0.03) 2px, rgba(255, 255, 255, 0.03) 4px);
+                repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(255, 255, 255, 0.08) 6px, rgba(255, 255, 255, 0.08) 8px),
+                repeating-linear-gradient(-45deg, transparent, transparent 6px, rgba(255, 255, 255, 0.08) 6px, rgba(255, 255, 255, 0.08) 8px);
             pointer-events: none;
+            background-size: 100% 100%;
+            transition: background-position 0.1s ease-out;
+            filter: brightness(var(--brightness, 1));
         }
 
         .container {
@@ -73,6 +77,20 @@
                 transform: translateY(0);
             }
         }
+
+        .grid-distort {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            z-index: 2;
+        }
     </style>
 </head>
 <body>
@@ -80,5 +98,32 @@
         <h1>Hallo Welt</h1>
         <p>Willkommen!</p>
     </div>
+
+    <script>
+        const body = document.body;
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            const distortX = (mouseX - window.innerWidth / 2) * 0.15;
+            const distortY = (mouseY - window.innerHeight / 2) * 0.15;
+
+            // Brightness effect - lines get brighter where mouse is
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const distance = Math.sqrt(Math.pow(mouseX - centerX, 2) + Math.pow(mouseY - centerY, 2));
+            const maxDistance = Math.sqrt(Math.pow(centerX, 2) + Math.pow(centerY, 2));
+            const brightness = 1 + (1 - Math.min(distance / (maxDistance * 0.3), 1)) * 2;
+
+            body.style.setProperty('--mouse-x', mouseX + 'px');
+            body.style.setProperty('--mouse-y', mouseY + 'px');
+            body.style.setProperty('--distort-x', distortX + 'px');
+            body.style.setProperty('--distort-y', distortY + 'px');
+            body.style.setProperty('--brightness', brightness);
+        });
+    </script>
 </body>
 </html>
