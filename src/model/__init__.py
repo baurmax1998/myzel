@@ -9,9 +9,9 @@ from pydantic import BaseModel, Field
 
 @dataclass
 class AwsEnviroment:
-    profile: str = "bins-example-dev"
-    account: str = "967243681795"
-    region: str = "eu-central-1"
+    profile: str
+    account: str
+    region: str
 
 
 

@@ -12,8 +12,3 @@ dependencies = [
     "packaging>=21.0",
     "pydantic>=2.12.5",
 ]
-
-
-[project.scripts]
-myzel-iac = "src.cli:cli"
-
