@@ -12,4 +12,6 @@ and apply changes.
 **Key Philosophy**: Simple happy path programming till it brakes.
 
 
-# !!! IMPORTANT: Dont Write Docu and Tests !!!
+# !!! IMPORTANT: Dont Write Docu !!!
+# !!! IMPORTANT: Dont Write Tests !!!
+# !!! IMPORTANT: Dont execute IAC Code!!!
