@@ -84,18 +84,32 @@ class CloudFront(Resources):
             print(f"Fehler beim Abrufen der Distribution {distribution_id}: {e}")
             raise
 
-    def create(self, s3_bucket_domain: str = None) -> str:
-        """Erstelle eine neue CloudFront Distribution"""
-        if not s3_bucket_domain:
-            raise ValueError("s3_bucket_domain erforderlich für CloudFront Distribution")
-
+    def create(self) -> str:
+        """Erstelle eine neue CloudFront Distribution mit OAC"""
         session = boto3.session.Session(
             profile_name=self.env.profile,
             region_name=self.env.region
         )
         cloudfront_client = session.client('cloudfront')
+        s3_client = session.client('s3')
 
         try:
+            # Erstelle Origin Access Control
+            oac_config = {
+                'OriginAccessControlConfig': {
+                    'Name': f'oac-{self.origin_id}',
+                    'OriginAccessControlOriginType': 's3',
+                    'SigningBehavior': 'always',
+                    'SigningProtocol': 'sigv4'
+                }
+            }
+            oac_response = cloudfront_client.create_origin_access_control(**oac_config)
+            oac_id = oac_response['OriginAccessControl']['Id']
+            print(f"Origin Access Control '{oac_id}' erstellt")
+
+            # Wenn kein domain_name angegeben, verwende origin_id als Platzhalter
+            domain_name = self.domain_name or f"{self.origin_id}.example.com"
+
             distribution_config = {
                 'CallerReference': self.origin_id,
                 'Origins': {
@@ -103,7 +117,8 @@ class CloudFront(Resources):
                     'Items': [
                         {
                             'Id': self.origin_id,
-                            'DomainName': s3_bucket_domain,
+                            'DomainName': domain_name,
+                            'OriginAccessControlId': oac_id,
                             'S3OriginConfig': {
                                 'OriginAccessIdentity': ''
                             }
@@ -136,10 +151,13 @@ class CloudFront(Resources):
 
             response = cloudfront_client.create_distribution(DistributionConfig=distribution_config)
             distribution_id = response['Distribution']['Id']
-            domain_name = response['Distribution']['DomainName']
+            cf_domain_name = response['Distribution']['DomainName']
 
             print(f"CloudFront Distribution '{distribution_id}' erfolgreich erstellt")
-            print(f"Domain: {domain_name}")
+            print(f"CloudFront Domain: {cf_domain_name}")
+
+            # Erstelle S3 Bucket Policy für OAC
+            self._create_bucket_policy_for_oac(s3_client, domain_name, oac_id)
 
             tech_id = self._create_tech_id(distribution_id)
             return tech_id
@@ -148,7 +166,7 @@ class CloudFront(Resources):
             print(f"Fehler beim Erstellen der Distribution: {e}")
             raise
 
-    def update(self, deployed_tech_id: str, new_value: 'CloudFront', s3_bucket_domain: str = None) -> str:
+    def update(self, deployed_tech_id: str, new_value: 'CloudFront') -> str:
         """Update eine CloudFront Distribution"""
         deployed_id = self._extract_distribution_id(deployed_tech_id)
         session = boto3.session.Session(
@@ -172,9 +190,9 @@ class CloudFront(Resources):
                 distribution_config['DefaultRootObject'] = new_value.default_root_object
                 print(f"Update: DefaultRootObject = {new_value.default_root_object}")
 
-            if s3_bucket_domain and s3_bucket_domain != distribution_config['Origins']['Items'][0]['DomainName']:
-                distribution_config['Origins']['Items'][0]['DomainName'] = s3_bucket_domain
-                print(f"Update: S3 Origin = {s3_bucket_domain}")
+            if new_value.domain_name and new_value.domain_name != distribution_config['Origins']['Items'][0]['DomainName']:
+                distribution_config['Origins']['Items'][0]['DomainName'] = new_value.domain_name
+                print(f"Update: S3 Origin = {new_value.domain_name}")
 
             # Aktualisiere Distribution
             response = cloudfront_client.update_distribution(
@@ -229,6 +247,37 @@ class CloudFront(Resources):
         except Exception as e:
             print(f"Fehler beim Löschen der Distribution: {e}")
             raise
+
+    def _create_bucket_policy_for_oac(self, s3_client, bucket_name: str, oac_id: str):
+        """Erstelle S3 Bucket Policy für CloudFront OAC"""
+        try:
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "cloudfront.amazonaws.com"
+                        },
+                        "Action": "s3:GetObject",
+                        "Resource": f"arn:aws:s3:::{bucket_name}/*",
+                        "Condition": {
+                            "StringEquals": {
+                                "AWS:SourceArn": f"arn:aws:cloudfront::{self.env.account}:distribution/{self.origin_id}"
+                            }
+                        }
+                    }
+                ]
+            }
+
+            import json
+            s3_client.put_bucket_policy(
+                Bucket=bucket_name,
+                Policy=json.dumps(policy)
+            )
+            print(f"S3 Bucket Policy für '{bucket_name}' erstellt")
+        except Exception as e:
+            print(f"Warnung: Fehler beim Erstellen der Bucket Policy: {e}")
 
     @staticmethod
     def _create_tech_id(distribution_id: str) -> str:
