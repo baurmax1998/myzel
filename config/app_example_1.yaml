@@ -1,7 +1,7 @@
 resources:
+  my-bucket:
+    type: s3
+    tech_id: arn:aws:s3:::my-example-testmb-bucket-22
   website:
     type: s3_deploy
-    tech_id: s3://my-example-bucket-testmb-23/website/v1
-  my-example-bucket-testmb-22:
-    type: s3
-    tech_id: arn:aws:s3:::my-example-bucket-testmb-23
+    tech_id: s3://my-example-testmb-bucket-22
