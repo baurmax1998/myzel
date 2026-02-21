@@ -15,8 +15,19 @@ def destroy(app: AwsApp, config_dir: Path = Path("config")) -> None:
     except ValidationError as e:
         raise RuntimeError(f"Invalid config {config_file}:\n{e}")
 
-    # Lösche alle Ressourcen aus der Config
-    for resource_id in iac_mapping.resources:
+    # Lösche alle Ressourcen aus der Config in umgekehrter Reihenfolge
+    # Priorität: cloudfront > s3_deploy > s3 (Abhängigkeiten beachten)
+    resource_ids = list(iac_mapping.resources.keys())
+
+    # Sortiere: cloudfront zuerst, dann s3_deploy, dann s3
+    def sort_key(resource_id):
+        resource_type = iac_mapping.resources[resource_id].type
+        priority = {'cloudfront': 0, 's3_deploy': 1, 's3': 2}
+        return priority.get(resource_type, 3)
+
+    resource_ids.sort(key=sort_key)
+
+    for resource_id in resource_ids:
         resource_mapping = iac_mapping.resources[resource_id]
         resource_type = resource_mapping.type
         tech_id = resource_mapping.tech_id

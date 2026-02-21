@@ -24,10 +24,7 @@ app.constructs["website"] = S3Deploy(
 )
 
 app.constructs["cloud-front"]  = CloudFront(
-    origin_id="my-website",
-    domain_name=f"{my_bucket.bucket_name}.s3.amazonaws.com",
-    enabled=True,
-    default_root_object="index.html",
+    name="example_1",
     env=app.env
 )
 

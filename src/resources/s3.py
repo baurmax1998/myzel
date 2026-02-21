@@ -16,25 +16,6 @@ class S3(Resources):
         self.bucket_name = bucket_name
         self.env = env
 
-    @classmethod
-    def list(cls, env: AwsEnviroment) -> list['S3']:
-        """Liste alle S3 Buckets auf"""
-        session = boto3.session.Session(
-            profile_name=env.profile,
-            region_name=env.region
-        )
-        s3_client = session.client('s3')
-
-        try:
-            response = s3_client.list_buckets()
-            buckets = []
-            for bucket in response.get('Buckets', []):
-                bucket_name = bucket['Name']
-                buckets.append(cls(bucket_name=bucket_name, env=env))
-            return buckets
-        except Exception as e:
-            print(f"Fehler beim Auflisten der Buckets: {e}")
-            return []
 
     @classmethod
     def get(cls, tech_id: str, env: AwsEnviroment) -> 'S3':
@@ -153,6 +134,17 @@ class S3(Resources):
         s3_client = session.client('s3')
 
         try:
+            # Lösche alle Objekte im Bucket
+            paginator = s3_client.get_paginator('list_objects_v2')
+            pages = paginator.paginate(Bucket=bucket_name)
+
+            for page in pages:
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        print(f"  Lösche Objekt: {obj['Key']}")
+                        s3_client.delete_object(Bucket=bucket_name, Key=obj['Key'])
+
+            # Lösche den Bucket
             s3_client.delete_bucket(Bucket=bucket_name)
             print(f"S3 Bucket '{bucket_name}' erfolgreich gelöscht")
         except Exception as e:

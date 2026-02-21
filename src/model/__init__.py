@@ -22,11 +22,6 @@ class Resources(ABC):  # Interface
 
     @classmethod
     @abstractmethod
-    def list(cls: Type[T], env: AwsEnviroment) -> list[T]:
-        pass
-
-    @classmethod
-    @abstractmethod
     def get(cls: Type[T], tech_id: str, env: AwsEnviroment) -> T:
         pass
 

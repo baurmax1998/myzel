@@ -22,27 +22,12 @@ class S3Deploy(Resources):
         self.s3_path = s3_path.rstrip('/') if s3_path else ''
         self.env = env
 
-    @classmethod
-    def list(cls, env: AwsEnviroment) -> list['S3Deploy']:
-        """Liste alle S3 Deployments auf"""
-        return []
 
     @classmethod
     def get(cls, tech_id: str, env: AwsEnviroment) -> 'S3Deploy':
         """Hole ein spezifisches S3 Deployment"""
         bucket_name, s3_path = cls._extract_from_tech_id(tech_id)
-        session = boto3.session.Session(
-            profile_name=env.profile,
-            region_name=env.region
-        )
-        s3_client = session.client('s3')
-
-        try:
-            s3_client.head_bucket(Bucket=bucket_name)
-            return cls(bucket_name=bucket_name, local_path="", s3_path=s3_path, env=env)
-        except Exception as e:
-            print(f"Fehler beim Abrufen des Deployments: {e}")
-            raise
+        return cls(bucket_name=bucket_name, local_path="", s3_path=s3_path, env=env)
 
     def create(self) -> str:
         """Erstelle Bucket und lade Dateien hoch"""
