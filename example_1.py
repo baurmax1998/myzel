@@ -13,12 +13,22 @@ app = AwsApp(name="example_1", env=AwsEnviroment(profile=os.getenv("AWS_PROFILE"
                                                  region=os.getenv("AWS_REGION")), constructs={})
 
 # S3 Bucket erstellen
-my_bucket = S3(bucket_name="my-example-testmb-bucket-22", env=app.env)
+my_bucket = S3(bucket_name="my-example-testmb-bucket-22", policy={
+    "Version": "2008-10-17",
+    "Id": "PolicyForCloudFrontPrivateContent",
+    "Statement": [{
+        "Sid": "AllowCloudFrontServicePrincipal",
+        "Effect": "Allow",
+        "Principal": {"Service": "cloudfront.amazonaws.com"},
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::my-example-testmb-bucket-22/*"
+    }]
+}, env=app.env)
 app.constructs["my-bucket"] = my_bucket
 
 app.constructs["website"] = S3Deploy(
     bucket_name=my_bucket.bucket_name,
-    local_path="./web",  # Dein web Ordner
+    local_path="./web/other",  # Dein web Ordner
     s3_path="",
     env=app.env
 )

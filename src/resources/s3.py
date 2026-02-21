@@ -1,3 +1,5 @@
+import json
+
 import boto3
 
 from src.model import AwsEnviroment, Resources
@@ -11,10 +13,12 @@ class S3(Resources):
     def __init__(
         self,
         bucket_name: str,
-        env: AwsEnviroment
+        env: AwsEnviroment,
+        policy: dict = None
     ):
         self.bucket_name = bucket_name
         self.env = env
+        self.policy = policy
 
 
     @classmethod
@@ -55,6 +59,9 @@ class S3(Resources):
                     )
                 print(f"S3 Bucket '{self.bucket_name}' erfolgreich erstellt")
 
+            if self.policy:
+                self._apply_policy(s3_client)
+
             arn = f"arn:aws:s3:::{self.bucket_name}"
             return arn
         except Exception as e:
@@ -68,6 +75,16 @@ class S3(Resources):
 
         if deployed_bucket_name == new_bucket_name:
             print(f"S3 Bucket '{deployed_bucket_name}' ist bereits aktuell")
+
+            session = boto3.session.Session(
+                profile_name=new_value.env.profile,
+                region_name=new_value.env.region
+            )
+            s3_client = session.client('s3')
+
+            if new_value.policy:
+                new_value._apply_policy(s3_client)
+
             arn = f"arn:aws:s3:::{deployed_bucket_name}"
             return arn
 
@@ -165,6 +182,40 @@ class S3(Resources):
             return True
         except:
             return False
+
+    def _apply_policy(self, s3_client):
+        """Wende Bucket Policy an oder aktualisiere sie"""
+        try:
+            existing_policy = None
+            try:
+                response = s3_client.get_bucket_policy(Bucket=self.bucket_name)
+                existing_policy = json.loads(response['Policy'])
+            except s3_client.exceptions.NoSuchBucketPolicy:
+                pass
+
+            new_policy_str = json.dumps(self.policy)
+
+            if existing_policy:
+                existing_policy_str = json.dumps(existing_policy, sort_keys=True)
+                new_policy_str_sorted = json.dumps(self.policy, sort_keys=True)
+
+                if existing_policy_str == new_policy_str_sorted:
+                    print(f"Bucket Policy für '{self.bucket_name}' ist bereits aktuell")
+                    return
+                else:
+                    print(f"Aktualisiere Bucket Policy für '{self.bucket_name}'")
+            else:
+                print(f"Erstelle neue Bucket Policy für '{self.bucket_name}'")
+
+            s3_client.put_bucket_policy(
+                Bucket=self.bucket_name,
+                Policy=new_policy_str
+            )
+            print(f"Bucket Policy erfolgreich angewendet")
+
+        except Exception as e:
+            print(f"Fehler beim Anwenden der Bucket Policy: {e}")
+            raise
 
     def __repr__(self) -> str:
         return f"S3(bucket='{self.bucket_name}')"
