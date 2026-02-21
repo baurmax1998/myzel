@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import boto3
 from pathlib import Path
@@ -135,11 +136,16 @@ class S3Deploy(Resources):
                 if self.s3_path:
                     s3_key = f"{self.s3_path}/{s3_key}"
 
-                print(f"  Lade hoch: {s3_key}")
+                content_type, _ = mimetypes.guess_type(str(file_path))
+                if content_type is None:
+                    content_type = 'application/octet-stream'
+
+                print(f"  Lade hoch: {s3_key} (ContentType: {content_type})")
                 s3_client.upload_file(
                     Filename=str(file_path),
                     Bucket=self.bucket_name,
-                    Key=s3_key
+                    Key=s3_key,
+                    ExtraArgs={'ContentType': content_type}
                 )
 
     def _clear_prefix(self, s3_client, prefix: str):
