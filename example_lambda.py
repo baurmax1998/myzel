@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from src.core import deploy, diff, destroy
 from src.model import AwsEnviroment, AwsApp
 from src.resources.cloudfront import CloudFront
+from src.resources.iam_role import IamRole
 from src.resources.lambda_function import LambdaFunction
 from src.resources.s3 import S3
 from src.resources.s3_deploy import S3Deploy
@@ -13,12 +14,32 @@ app = AwsApp(name="example_lambda", env=AwsEnviroment(profile=os.getenv("AWS_PRO
                                                  account=os.getenv("AWS_ACCOUNT"),
                                                  region=os.getenv("AWS_REGION")), constructs={})
 
-app.constructs["lambda"] =  LambdaFunction(
+lambda_role = IamRole(
+    role_name="hallo-welt-lambda-role",
+    assume_role_policy={
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }]
+    },
+    managed_policies=[
+        "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+    ],
+    description="IAM Role für Hallo Welt Lambda Function",
+    env=app.env
+)
+app.constructs["lambda-role"] = lambda_role
+
+app.constructs["lambda"] = LambdaFunction(
     function_name="hallo-welt",
     handler="lambda_function.lambda_handler",
     runtime="python3.13",
     code_path="./functions/hallo_welt",
-    role_arn="arn:aws:iam::...:role/lambda-role",
+    role_arn=lambda_role.get_arn(),
     env=app.env
 )
 

@@ -73,6 +73,10 @@ class LambdaFunction(Resources):
             region_name=self.env.region
         )
         lambda_client = session.client('lambda')
+        iam_client = session.client('iam')
+
+        print(f"Warte auf IAM Role Propagation...")
+        self._wait_for_role_propagation(iam_client)
 
         zip_file = self._create_deployment_package()
 
@@ -208,6 +212,25 @@ class LambdaFunction(Resources):
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
             raise e
+
+    def _wait_for_role_propagation(self, iam_client):
+        """Warte bis IAM Role verfügbar ist"""
+        import time
+        role_name = self.role_arn.split('/')[-1]
+
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            try:
+                iam_client.get_role(RoleName=role_name)
+                time.sleep(2)
+                print(f"IAM Role verfügbar")
+                return
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    print(f"  Warte auf Role... (Versuch {attempt + 1}/{max_attempts})")
+                    time.sleep(2)
+                else:
+                    raise
 
     @staticmethod
     def _extract_function_name(arn: str) -> str:
