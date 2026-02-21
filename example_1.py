@@ -23,10 +23,10 @@ app.constructs["website"] = S3Deploy(
     env=app.env
 )
 
-app.constructs["cloud-front"]  = CloudFront(
-    name="example_1",
-    env=app.env
-)
+# app.constructs["cloud-front"]  = CloudFront(
+#     name="example_1",
+#     env=app.env
+# )
 
 
 deploy(app)
