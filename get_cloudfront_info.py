@@ -63,8 +63,8 @@ def get_cloudfront_distribution_info(distribution_id: str) -> dict:
 
 
 if __name__ == "__main__":
-    distribution_id = "E2RJ0EVZCLTJKA"
-    # distribution_id = "E9EGNST5NM0V6"
+    distribution_id = "E119T2J1I45FI2"
+    distribution_id = "E3FCJ7NX9ZWE74"
 
     print(f"Fetching information for CloudFront distribution: {distribution_id}")
 

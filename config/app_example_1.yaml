@@ -1,10 +1,10 @@
 resources:
+  cloudfront:
+    type: cloudfront
+    tech_id: arn:aws:cloudfront::745243048623:distribution/E34AFTO0HI2X7W
   my-bucket:
     type: s3
     tech_id: arn:aws:s3:::my-example-testmb-bucket-22
   website:
     type: s3_deploy
     tech_id: s3://my-example-testmb-bucket-22
-  cloudfront:
-    type: cloudfront
-    tech_id: arn:aws:cloudfront::745243048623:distribution/E1WVRZHZJ5BYWH

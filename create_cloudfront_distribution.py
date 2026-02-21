@@ -149,7 +149,7 @@ def create_cloudfront_distribution_for_s3(bucket_name: str) -> dict:
 
 if __name__ == "__main__":
     # Example usage
-    bucket_name = "testmb-652-web"
+    # bucket_name = "testmb-652-web"
     bucket_name = "my-example-testmb-bucket-22"
 
     distribution_info = create_cloudfront_distribution_for_s3(bucket_name)

@@ -65,9 +65,9 @@ def update_cloudfront_bucket(distribution_arn: str, new_bucket_name: str) -> str
 
 if __name__ == "__main__":
     # Example usage
-    distribution_arn = "arn:aws:cloudfront::745243048623:distribution/E2YY4MDF5W8XKP"
-    new_bucket_name = "testmb-652-web"
-    # new_bucket_name = "my-example-testmb-bucket-22"
+    distribution_arn = "arn:aws:cloudfront::745243048623:distribution/E1KDWKCJDC3WJO"
+    # new_bucket_name = "testmb-652-web"
+    new_bucket_name = "my-example-testmb-bucket-22"
 
     updated_arn = update_cloudfront_bucket(distribution_arn, new_bucket_name)
     print(f"\nUpdated ARN: {updated_arn}")
