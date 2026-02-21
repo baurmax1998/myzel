@@ -12,7 +12,7 @@ def lambda_handler(event, context):
     """
     name = event.get('name', 'Welt')
 
-    message = f"Hallo {name}!!"
+    message = f"Hallo {name}!! <3"
 
     return {
         'statusCode': 200,

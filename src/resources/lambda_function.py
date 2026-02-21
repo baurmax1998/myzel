@@ -135,6 +135,9 @@ class LambdaFunction(Resources):
             )
             print(f"Lambda Code aktualisiert: {function_name}")
 
+            print(f"Warte auf Code Update Abschluss...")
+            new_value._wait_for_function_update(lambda_client, function_name)
+
             config_updates = {
                 'FunctionName': function_name,
                 'Runtime': new_value.runtime,
@@ -231,6 +234,35 @@ class LambdaFunction(Resources):
                     time.sleep(2)
                 else:
                     raise
+
+    def _wait_for_function_update(self, lambda_client, function_name):
+        """Warte bis Lambda Function Update abgeschlossen ist"""
+        import time
+
+        max_attempts = 30
+        for attempt in range(max_attempts):
+            try:
+                response = lambda_client.get_function(FunctionName=function_name)
+                state = response['Configuration']['State']
+                last_update_status = response['Configuration']['LastUpdateStatus']
+
+                if state == 'Active' and last_update_status == 'Successful':
+                    print(f"Lambda Function Update abgeschlossen")
+                    return
+
+                if last_update_status == 'Failed':
+                    raise Exception(f"Lambda Update fehlgeschlagen")
+
+                print(f"  Warte auf Update... (State: {state}, Status: {last_update_status})")
+                time.sleep(2)
+
+            except Exception as e:
+                if 'Update' in str(e) or 'progress' in str(e):
+                    time.sleep(2)
+                else:
+                    raise
+
+        raise Exception(f"Timeout beim Warten auf Lambda Update nach {max_attempts * 2} Sekunden")
 
     @staticmethod
     def _extract_function_name(arn: str) -> str:
