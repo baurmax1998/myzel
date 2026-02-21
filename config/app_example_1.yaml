@@ -5,6 +5,3 @@ resources:
   website:
     type: s3_deploy
     tech_id: s3://my-example-testmb-bucket-22
-  cloud-front:
-    type: cloudfront
-    tech_id: arn:aws:cloudfront::E10FO9LNPYAVXS
