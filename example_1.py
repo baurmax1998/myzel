@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from src.core import deploy, diff, destroy
 from src.model import AwsEnviroment, AwsApp
+from src.resources.api_gateway import ApiGateway
 from src.resources.cloudfront import CloudFront
 from src.resources.iam_role import IamRole
 from src.resources.lambda_function import LambdaFunction
@@ -35,12 +36,6 @@ app.constructs["website"] = S3Deploy(
     env=app.env
 )
 
-app.constructs["cloudfront"] = CloudFront(
-    bucket_name=my_bucket.bucket_name,
-    env=app.env
-)
-
-
 lambda_role = IamRole(
     role_name="hallo-welt-lambda-role",
     assume_role_policy={
@@ -69,5 +64,27 @@ app.constructs["lambda"] = LambdaFunction(
     role_arn=lambda_role.get_arn(),
     env=app.env
 )
+
+api_gateway = ApiGateway(
+    api_name="hallo-welt-api",
+    routes={
+        "/api/hello": {
+            "method": "GET",
+            "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:hallo-welt",
+            "lambda_name": "hallo-welt"
+        }
+    },
+    description="API Gateway für Hallo Welt Lambda",
+    env=app.env
+)
+app.constructs["api-gateway"] = api_gateway
+
+app.constructs["cloudfront"] = CloudFront(
+    bucket_name=my_bucket.bucket_name,
+    api_gateway_endpoint=f"https://uvjfr5s7d6.execute-api.{app.env.region}.amazonaws.com",
+    env=app.env
+)
+
+
 
 deploy(app)

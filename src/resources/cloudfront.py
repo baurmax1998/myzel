@@ -49,63 +49,110 @@ class CloudFront(Resources):
             raise
 
     def create(self) -> str:
-        """Erstelle eine neue CloudFront Distribution mit OAC"""
+        """Erstelle eine neue CloudFront Distribution"""
         session = boto3.session.Session(
             profile_name=self.env.profile,
             region_name=self.env.region
         )
         cloudfront_client = session.client('cloudfront')
-        s3_client = session.client('s3')
 
-        bucket_location = s3_client.get_bucket_location(Bucket=self.bucket_name)
-        bucket_region = bucket_location['LocationConstraint'] or 'us-east-1'
+        origins = []
+        behaviors = []
+        comment_parts = []
 
-        s3_domain = f"{self.bucket_name}.s3.{bucket_region}.amazonaws.com"
-        origin_id = f"{s3_domain}-{uuid.uuid4().hex[:11]}"
+        if self.bucket_name:
+            s3_client = session.client('s3')
+            bucket_location = s3_client.get_bucket_location(Bucket=self.bucket_name)
+            bucket_region = bucket_location['LocationConstraint'] or 'us-east-1'
+            s3_domain = f"{self.bucket_name}.s3.{bucket_region}.amazonaws.com"
+            s3_origin_id = f"s3-{uuid.uuid4().hex[:11]}"
 
-        oac_response = cloudfront_client.create_origin_access_control(
-            OriginAccessControlConfig={
-                'Name': f'OAC-{self.bucket_name}-{uuid.uuid4().hex[:8]}',
-                'Description': f'Origin Access Control for {self.bucket_name}',
-                'SigningProtocol': 'sigv4',
-                'SigningBehavior': 'always',
-                'OriginAccessControlOriginType': 's3'
-            }
-        )
-        oac_id = oac_response['OriginAccessControl']['Id']
+            oac_response = cloudfront_client.create_origin_access_control(
+                OriginAccessControlConfig={
+                    'Name': f'OAC-{self.bucket_name}-{uuid.uuid4().hex[:8]}',
+                    'Description': f'Origin Access Control for {self.bucket_name}',
+                    'SigningProtocol': 'sigv4',
+                    'SigningBehavior': 'always',
+                    'OriginAccessControlOriginType': 's3'
+                }
+            )
+            oac_id = oac_response['OriginAccessControl']['Id']
+
+            origins.append({
+                'Id': s3_origin_id,
+                'DomainName': s3_domain,
+                'OriginPath': '',
+                'CustomHeaders': {'Quantity': 0},
+                'S3OriginConfig': {
+                    'OriginAccessIdentity': '',
+                    'OriginReadTimeout': 30
+                },
+                'ConnectionAttempts': 3,
+                'ConnectionTimeout': 10,
+                'OriginShield': {'Enabled': False},
+                'OriginAccessControlId': oac_id
+            })
+            comment_parts.append(f"S3: {self.bucket_name}")
+
+        if self.api_gateway_endpoint:
+            api_domain = self.api_gateway_endpoint.replace('https://', '')
+            api_origin_id = f"api-{uuid.uuid4().hex[:11]}"
+
+            origins.append({
+                'Id': api_origin_id,
+                'DomainName': api_domain,
+                'OriginPath': '',
+                'CustomHeaders': {'Quantity': 0},
+                'CustomOriginConfig': {
+                    'HTTPPort': 80,
+                    'HTTPSPort': 443,
+                    'OriginProtocolPolicy': 'https-only',
+                    'OriginSslProtocols': {
+                        'Quantity': 1,
+                        'Items': ['TLSv1.2']
+                    },
+                    'OriginReadTimeout': 30,
+                    'OriginKeepaliveTimeout': 5
+                },
+                'ConnectionAttempts': 3,
+                'ConnectionTimeout': 10,
+                'OriginShield': {'Enabled': False}
+            })
+            comment_parts.append(f"API: {api_domain}")
+
+            behaviors.append({
+                'PathPattern': '/api/*',
+                'TargetOriginId': api_origin_id,
+                'ViewerProtocolPolicy': 'https-only',
+                'AllowedMethods': {
+                    'Quantity': 7,
+                    'Items': ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'PATCH', 'DELETE'],
+                    'CachedMethods': {
+                        'Quantity': 2,
+                        'Items': ['HEAD', 'GET']
+                    }
+                },
+                'Compress': True,
+                'CachePolicyId': '4135ea2d-6df8-44a3-9df3-4b5a84be39ad',
+                'OriginRequestPolicyId': 'b689b0a8-53d0-40ab-baf2-68738e2966ac',
+                'TrustedSigners': {'Enabled': False, 'Quantity': 0},
+                'TrustedKeyGroups': {'Enabled': False, 'Quantity': 0},
+                'FieldLevelEncryptionId': ''
+            })
+
+        default_origin_id = origins[0]['Id'] if origins else None
 
         distribution_config = {
             'CallerReference': str(uuid.uuid4()),
-            'Comment': f'CloudFront distribution for {self.bucket_name}',
+            'Comment': f"CloudFront: {', '.join(comment_parts)}" if comment_parts else 'CloudFront Distribution',
             'Enabled': True,
             'Origins': {
-                'Quantity': 1,
-                'Items': [
-                    {
-                        'Id': origin_id,
-                        'DomainName': s3_domain,
-                        'OriginPath': '',
-                        'CustomHeaders': {
-                            'Quantity': 0
-                        },
-                        'S3OriginConfig': {
-                            'OriginAccessIdentity': '',
-                            'OriginReadTimeout': 30
-                        },
-                        'ConnectionAttempts': 3,
-                        'ConnectionTimeout': 10,
-                        'OriginShield': {
-                            'Enabled': False
-                        },
-                        'OriginAccessControlId': oac_id
-                    }
-                ]
+                'Quantity': len(origins),
+                'Items': origins
             },
-            'OriginGroups': {
-                'Quantity': 0
-            },
+            'OriginGroups': {'Quantity': 0},
             'DefaultCacheBehavior': {
-                'TargetOriginId': origin_id,
+                'TargetOriginId': default_origin_id,
                 'ViewerProtocolPolicy': 'redirect-to-https',
                 'AllowedMethods': {
                     'Quantity': 2,
@@ -118,27 +165,18 @@ class CloudFront(Resources):
                 'Compress': True,
                 'CachePolicyId': '658327ea-f89d-4fab-a63d-7e88639e58f6',
                 'OriginRequestPolicyId': '88a5eaf4-2fd4-4709-b370-b4c650ea3fcf',
-                'TrustedSigners': {
-                    'Enabled': False,
-                    'Quantity': 0
-                },
-                'TrustedKeyGroups': {
-                    'Enabled': False,
-                    'Quantity': 0
-                },
+                'TrustedSigners': {'Enabled': False, 'Quantity': 0},
+                'TrustedKeyGroups': {'Enabled': False, 'Quantity': 0},
                 'SmoothStreaming': False,
                 'FieldLevelEncryptionId': ''
             },
             'CacheBehaviors': {
-                'Quantity': 0
-            },
-            'CustomErrorResponses': {
-                'Quantity': 0
-            },
+                'Quantity': len(behaviors),
+                'Items': behaviors
+            } if behaviors else {'Quantity': 0},
+            'CustomErrorResponses': {'Quantity': 0},
             'DefaultRootObject': '',
-            'Aliases': {
-                'Quantity': 0
-            },
+            'Aliases': {'Quantity': 0},
             'PriceClass': 'PriceClass_All',
             'ViewerCertificate': {
                 'CloudFrontDefaultCertificate': True,
@@ -171,25 +209,132 @@ class CloudFront(Resources):
             region_name=new_value.env.region
         )
         cloudfront_client = session.client('cloudfront')
-        s3_client = session.client('s3')
 
         response = cloudfront_client.get_distribution_config(Id=distribution_id)
         distribution_config = response['DistributionConfig']
         etag = response['ETag']
 
-        current_origin_domain = distribution_config['Origins']['Items'][0]['DomainName']
-        current_bucket = current_origin_domain.split('.s3.')[0]
+        current_origins = {origin['DomainName']: origin for origin in distribution_config['Origins']['Items']}
+        needs_update = False
 
-        if current_bucket == new_value.bucket_name:
+        new_origins = []
+        new_behaviors = []
+
+        if new_value.bucket_name:
+            s3_client = session.client('s3')
+            bucket_location = s3_client.get_bucket_location(Bucket=new_value.bucket_name)
+            bucket_region = bucket_location['LocationConstraint'] or 'us-east-1'
+            s3_domain = f"{new_value.bucket_name}.s3.{bucket_region}.amazonaws.com"
+
+            if s3_domain not in current_origins:
+                print(f"Füge S3 Origin hinzu: {s3_domain}")
+                needs_update = True
+
+                oac_response = cloudfront_client.create_origin_access_control(
+                    OriginAccessControlConfig={
+                        'Name': f'OAC-{new_value.bucket_name}-{uuid.uuid4().hex[:8]}',
+                        'Description': f'Origin Access Control for {new_value.bucket_name}',
+                        'SigningProtocol': 'sigv4',
+                        'SigningBehavior': 'always',
+                        'OriginAccessControlOriginType': 's3'
+                    }
+                )
+                oac_id = oac_response['OriginAccessControl']['Id']
+
+                s3_origin_id = f"s3-{uuid.uuid4().hex[:11]}"
+                new_origins.append({
+                    'Id': s3_origin_id,
+                    'DomainName': s3_domain,
+                    'OriginPath': '',
+                    'CustomHeaders': {'Quantity': 0},
+                    'S3OriginConfig': {
+                        'OriginAccessIdentity': '',
+                        'OriginReadTimeout': 30
+                    },
+                    'ConnectionAttempts': 3,
+                    'ConnectionTimeout': 10,
+                    'OriginShield': {'Enabled': False},
+                    'OriginAccessControlId': oac_id
+                })
+            else:
+                for origin in distribution_config['Origins']['Items']:
+                    if s3_domain in origin['DomainName']:
+                        new_origins.append(origin)
+                        break
+
+        if new_value.api_gateway_endpoint:
+            api_domain = new_value.api_gateway_endpoint.replace('https://', '')
+
+            if api_domain not in current_origins:
+                print(f"Füge API Gateway Origin hinzu: {api_domain}")
+                needs_update = True
+
+                api_origin_id = f"api-{uuid.uuid4().hex[:11]}"
+                new_origins.append({
+                    'Id': api_origin_id,
+                    'DomainName': api_domain,
+                    'OriginPath': '',
+                    'CustomHeaders': {'Quantity': 0},
+                    'CustomOriginConfig': {
+                        'HTTPPort': 80,
+                        'HTTPSPort': 443,
+                        'OriginProtocolPolicy': 'https-only',
+                        'OriginSslProtocols': {
+                            'Quantity': 1,
+                            'Items': ['TLSv1.2']
+                        },
+                        'OriginReadTimeout': 30,
+                        'OriginKeepaliveTimeout': 5
+                    },
+                    'ConnectionAttempts': 3,
+                    'ConnectionTimeout': 10,
+                    'OriginShield': {'Enabled': False}
+                })
+
+                new_behaviors.append({
+                    'PathPattern': '/api/*',
+                    'TargetOriginId': api_origin_id,
+                    'ViewerProtocolPolicy': 'https-only',
+                    'AllowedMethods': {
+                        'Quantity': 7,
+                        'Items': ['GET', 'HEAD', 'OPTIONS', 'PUT', 'POST', 'PATCH', 'DELETE'],
+                        'CachedMethods': {
+                            'Quantity': 2,
+                            'Items': ['HEAD', 'GET']
+                        }
+                    },
+                    'Compress': True,
+                    'CachePolicyId': '4135ea2d-6df8-44a3-9df3-4b5a84be39ad',
+                    'OriginRequestPolicyId': 'b689b0a8-53d0-40ab-baf2-68738e2966ac',
+                    'TrustedSigners': {'Enabled': False, 'Quantity': 0},
+                    'TrustedKeyGroups': {'Enabled': False, 'Quantity': 0},
+                    'FieldLevelEncryptionId': ''
+                })
+            else:
+                for origin in distribution_config['Origins']['Items']:
+                    if api_domain in origin['DomainName']:
+                        new_origins.append(origin)
+                        break
+                for behavior in distribution_config.get('CacheBehaviors', {}).get('Items', []):
+                    if behavior['PathPattern'] == '/api/*':
+                        new_behaviors.append(behavior)
+
+        if not needs_update:
             print(f"CloudFront Distribution {distribution_id} ist bereits aktuell")
             return deployed_tech_id
 
-        bucket_location = s3_client.get_bucket_location(Bucket=new_value.bucket_name)
-        bucket_region = bucket_location['LocationConstraint'] or 'us-east-1'
-        new_s3_domain = f"{new_value.bucket_name}.s3.{bucket_region}.amazonaws.com"
+        distribution_config['Origins'] = {
+            'Quantity': len(new_origins),
+            'Items': new_origins
+        }
 
-        distribution_config['Origins']['Items'][0]['DomainName'] = new_s3_domain
-        print(f"Aktualisiere Origin Domain zu: {new_s3_domain}")
+        if distribution_config['DefaultCacheBehavior']['TargetOriginId'] not in [o['Id'] for o in new_origins]:
+            distribution_config['DefaultCacheBehavior']['TargetOriginId'] = new_origins[0]['Id']
+
+        distribution_config['CacheBehaviors'] = {
+            'Quantity': len(new_behaviors),
+            'Items': new_behaviors
+        } if new_behaviors else {'Quantity': 0}
 
         update_response = cloudfront_client.update_distribution(
             DistributionConfig=distribution_config,
