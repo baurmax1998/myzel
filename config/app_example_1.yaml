@@ -1,4 +1,7 @@
 resources:
+  cloudfront:
+    type: cloudfront
+    tech_id: arn:aws:cloudfront::745243048623:distribution/E4PYL7N4QM15Z
   my-bucket:
     type: s3
     tech_id: arn:aws:s3:::my-example-testmb-bucket-22
@@ -14,6 +17,3 @@ resources:
   api-gateway:
     type: api_gateway
     tech_id: https://uvjfr5s7d6.execute-api.eu-central-1.amazonaws.com
-  cloudfront:
-    type: cloudfront
-    tech_id: arn:aws:cloudfront::745243048623:distribution/E2Z0JYVHNEAMLB
