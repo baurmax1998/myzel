@@ -68,6 +68,81 @@
             font-size: 1.2em;
         }
 
+        .input-group {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            border: 2px solid #a8d850;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: #b8d450;
+            outline: none;
+            transition: all 0.3s ease;
+            min-width: 250px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #c8f050;
+            box-shadow: 0 0 15px rgba(150, 180, 50, 0.5);
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            background: linear-gradient(135deg, #c8f050 0%, #a8d850 100%);
+            color: black;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(150, 180, 50, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(150, 180, 50, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #response {
+            margin-top: 30px;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            border: 2px solid #a8d850;
+            color: #b8d450;
+            font-size: 1.5em;
+            min-height: 60px;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        #response.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -90,8 +165,40 @@
     <div class="container">
         <h1>Hallo Welt</h1>
         <p>Willkommen!</p>
+
+        <div class="input-group">
+            <input type="text" id="nameInput" placeholder="Gib deinen Namen ein..." />
+            <button onclick="sayHello()">Sag Hallo!</button>
+        </div>
+
+        <div id="response"></div>
     </div>
 
+    <script>
+        async function sayHello() {
+            const nameInput = document.getElementById('nameInput');
+            const responseDiv = document.getElementById('response');
+            const name = nameInput.value.trim() || 'Welt';
 
+            responseDiv.classList.remove('show');
+            responseDiv.textContent = 'Lädt...';
+            responseDiv.classList.add('show');
+
+            try {
+                const response = await fetch(`/api/hello?name=${encodeURIComponent(name)}`);
+                const data = await response.json();
+
+                responseDiv.textContent = data.message;
+            } catch (error) {
+                responseDiv.textContent = 'Fehler beim Laden: ' + error.message;
+            }
+        }
+
+        document.getElementById('nameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sayHello();
+            }
+        });
+    </script>
 </body>
 </html>
