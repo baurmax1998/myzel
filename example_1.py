@@ -30,7 +30,7 @@ app.constructs["my-bucket"] = my_bucket
 
 app.constructs["website"] = S3Deploy(
     bucket_name=my_bucket.bucket_name,
-    local_path="./web/other/other/",
+    local_path="./web/",
     s3_path="",
     env=app.env
 )

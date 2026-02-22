@@ -67,7 +67,7 @@ class LambdaFunction(Resources):
             raise
 
     def create(self) -> str:
-        """Erstelle eine neue Lambda Function"""
+        """Erstelle eine neue Lambda Function oder verwende existierende"""
         session = boto3.session.Session(
             profile_name=self.env.profile,
             region_name=self.env.region
@@ -75,43 +75,51 @@ class LambdaFunction(Resources):
         lambda_client = session.client('lambda')
         iam_client = session.client('iam')
 
-        print(f"Warte auf IAM Role Propagation...")
-        self._wait_for_role_propagation(iam_client)
-
-        zip_file = self._create_deployment_package()
-
         try:
-            with open(zip_file, 'rb') as f:
-                zip_content = f.read()
+            existing_function = lambda_client.get_function(FunctionName=self.function_name)
+            print(f"Lambda Function existiert bereits: {self.function_name}")
+            arn = existing_function['Configuration']['FunctionArn']
 
-            function_config = {
-                'FunctionName': self.function_name,
-                'Runtime': self.runtime,
-                'Role': self.role_arn,
-                'Handler': self.handler,
-                'Code': {'ZipFile': zip_content},
-                'Timeout': self.timeout,
-                'MemorySize': self.memory_size
-            }
+            return self.update(arn, self)
 
-            if self.environment_variables:
-                function_config['Environment'] = {
-                    'Variables': self.environment_variables
+        except lambda_client.exceptions.ResourceNotFoundException:
+            print(f"Warte auf IAM Role Propagation...")
+            self._wait_for_role_propagation(iam_client)
+
+            zip_file = self._create_deployment_package()
+
+            try:
+                with open(zip_file, 'rb') as f:
+                    zip_content = f.read()
+
+                function_config = {
+                    'FunctionName': self.function_name,
+                    'Runtime': self.runtime,
+                    'Role': self.role_arn,
+                    'Handler': self.handler,
+                    'Code': {'ZipFile': zip_content},
+                    'Timeout': self.timeout,
+                    'MemorySize': self.memory_size
                 }
 
-            response = lambda_client.create_function(**function_config)
+                if self.environment_variables:
+                    function_config['Environment'] = {
+                        'Variables': self.environment_variables
+                    }
 
-            arn = response['FunctionArn']
-            print(f"Lambda Function erstellt: {self.function_name}")
-            print(f"ARN: {arn}")
-            print(f"Runtime: {self.runtime}")
-            print(f"Handler: {self.handler}")
+                response = lambda_client.create_function(**function_config)
 
-            return arn
+                arn = response['FunctionArn']
+                print(f"Lambda Function erstellt: {self.function_name}")
+                print(f"ARN: {arn}")
+                print(f"Runtime: {self.runtime}")
+                print(f"Handler: {self.handler}")
 
-        finally:
-            if os.path.exists(zip_file):
-                os.remove(zip_file)
+                return arn
+
+            finally:
+                if os.path.exists(zip_file):
+                    os.remove(zip_file)
 
     def update(self, deployed_tech_id: str, new_value: 'LambdaFunction') -> str:
         """Update eine Lambda Function"""
