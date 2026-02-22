@@ -13,11 +13,18 @@ class CloudFront(Resources):
 
     def __init__(
         self,
-        bucket_name: str,
-        env: AwsEnviroment
+        env: AwsEnviroment,
+        bucket_name: str = None,
+        api_gateway_endpoint: str = None,
+        distribution_name: str = None
     ):
         self.bucket_name = bucket_name
+        self.api_gateway_endpoint = api_gateway_endpoint
+        self.distribution_name = distribution_name
         self.env = env
+
+        if not bucket_name and not api_gateway_endpoint:
+            raise ValueError("Entweder bucket_name oder api_gateway_endpoint muss angegeben werden")
 
     @classmethod
     def get(cls, tech_id: str, env: AwsEnviroment) -> 'CloudFront':

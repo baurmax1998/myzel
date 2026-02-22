@@ -10,7 +10,9 @@ def lambda_handler(event, context):
     Returns:
         dict: Response mit Statuscode und Body
     """
-    name = event.get('name', 'Welt')
+    # Query Parameter aus API Gateway Event
+    query_params = event.get('queryStringParameters', {}) or {}
+    name = query_params.get('name', 'Welt')
 
     message = f"Hallo {name}!! <3"
 

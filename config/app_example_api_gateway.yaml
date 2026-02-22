@@ -1,0 +1,10 @@
+resources:
+  lambda-role:
+    type: iam_role
+    tech_id: arn:aws:iam::745243048623:role/hallo-welt-lambda-role
+  lambda:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:hallo-welt
+  api-gateway:
+    type: api_gateway
+    tech_id: https://uvjfr5s7d6.execute-api.eu-central-1.amazonaws.com
