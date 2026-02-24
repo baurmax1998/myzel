@@ -37,4 +37,4 @@ resources:
     tech_id: https://r5kaifpzh4.execute-api.eu-central-1.amazonaws.com
   30-cloudfront:
     type: cloudfront
-    tech_id: arn:aws:cloudfront::745243048623:distribution/E191U1J2N3BB4S
+    tech_id: arn:aws:cloudfront::745243048623:distribution/EYMN6LU7LZ95W

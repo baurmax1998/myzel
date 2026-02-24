@@ -98,7 +98,7 @@ class CloudFront(Resources):
             comment_parts.append(f"S3: {self.bucket_name}")
 
         if self.api_gateway_endpoint:
-            api_domain = self.api_gateway_endpoint.replace('https://', '')
+            api_domain = self.api_gateway_endpoint.replace('https://', '').rstrip('/')
             api_origin_id = f"api-{uuid.uuid4().hex[:11]}"
 
             origins.append({
@@ -226,9 +226,13 @@ class CloudFront(Resources):
         )
         cloudfront_client = session.client('cloudfront')
 
-        response = cloudfront_client.get_distribution_config(Id=distribution_id)
-        distribution_config = response['DistributionConfig']
-        etag = response['ETag']
+        try:
+            response = cloudfront_client.get_distribution_config(Id=distribution_id)
+            distribution_config = response['DistributionConfig']
+            etag = response['ETag']
+        except cloudfront_client.exceptions.NoSuchDistribution:
+            print(f"CloudFront Distribution {distribution_id} existiert nicht, erstelle neue...")
+            return new_value.create()
 
         current_origins = {origin['DomainName']: origin for origin in distribution_config['Origins']['Items']}
         needs_update = False
@@ -279,7 +283,7 @@ class CloudFront(Resources):
                         break
 
         if new_value.api_gateway_endpoint:
-            api_domain = new_value.api_gateway_endpoint.replace('https://', '')
+            api_domain = new_value.api_gateway_endpoint.replace('https://', '').rstrip('/')
 
             if api_domain not in current_origins:
                 print(f"Füge API Gateway Origin hinzu: {api_domain}")

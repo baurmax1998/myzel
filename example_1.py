@@ -193,7 +193,7 @@ app.constructs["20-api-gateway"] = api_gateway
 # CloudFront
 app.constructs["30-cloudfront"] = CloudFront(
     bucket_name=my_bucket.bucket_name,
-    api_gateway_endpoint=f"https://uvjfr5s7d6.execute-api.{app.env.region}.amazonaws.com",
+    api_gateway_endpoint=f"https://r5kaifpzh4.execute-api.{app.env.region}.amazonaws.com",
     env=app.env
 )
 
