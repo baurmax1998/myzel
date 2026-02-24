@@ -1,18 +1,14 @@
 from pathlib import Path
-from src.model import AwsEnviroment
 from src.resources.api_gateway import ApiGateway
 from src.resources.lambda_function import LambdaFunction
 from src.resources.iam_role import IamRole
 from test.resources.resource_tester import ResourceTester
+from test.resources.env_helper import load_env
 
 
 def test_api_gateway():
     """Testet API Gateway Resource"""
-    env = AwsEnviroment(
-        profile="default",
-        region="eu-central-1",
-        account="745243048623"
-    )
+    env = load_env()
 
     tester = ResourceTester(env)
 

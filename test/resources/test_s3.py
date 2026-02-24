@@ -1,15 +1,11 @@
-from src.model import AwsEnviroment
 from src.resources.s3 import S3
 from test.resources.resource_tester import ResourceTester
+from test.resources.env_helper import load_env
 
 
 def test_s3():
     """Testet S3 Resource"""
-    env = AwsEnviroment(
-        profile="default",
-        region="eu-central-1",
-        account="745243048623"
-    )
+    env = load_env()
 
     tester = ResourceTester(env)
 

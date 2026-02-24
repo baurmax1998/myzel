@@ -1,16 +1,12 @@
-from src.model import AwsEnviroment
 from src.resources.s3 import S3
 from src.resources.cloudfront import CloudFront
 from test.resources.resource_tester import ResourceTester
+from test.resources.env_helper import load_env
 
 
 def test_cloudfront():
     """Testet CloudFront Resource"""
-    env = AwsEnviroment(
-        profile="default",
-        region="eu-central-1",
-        account="745243048623"
-    )
+    env = load_env()
 
     tester = ResourceTester(env)
 
