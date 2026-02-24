@@ -26,9 +26,6 @@ resources:
   12-lambda-todo-list:
     type: lambda
     tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-list
-  13-lambda-todo-update:
-    type: lambda
-    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-update
   14-lambda-todo-delete:
     type: lambda
     tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-delete
