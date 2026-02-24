@@ -16,14 +16,15 @@ class CloudFront(Resources):
         env: AwsEnviroment,
         bucket_name: str = None,
         api_gateway_endpoint: str = None,
-        distribution_name: str = None
+        distribution_name: str = None,
+        _skip_validation: bool = False
     ):
         self.bucket_name = bucket_name
         self.api_gateway_endpoint = api_gateway_endpoint
         self.distribution_name = distribution_name
         self.env = env
 
-        if not bucket_name and not api_gateway_endpoint:
+        if not _skip_validation and not bucket_name and not api_gateway_endpoint:
             raise ValueError("Entweder bucket_name oder api_gateway_endpoint muss angegeben werden")
 
     @classmethod
@@ -44,6 +45,8 @@ class CloudFront(Resources):
             bucket_name = origin_domain.split('.s3.')[0]
 
             return cls(bucket_name=bucket_name, env=env)
+        except cloudfront_client.exceptions.NoSuchDistribution:
+            return cls(env=env, _skip_validation=True)
         except Exception as e:
             print(f"Fehler beim Abrufen der Distribution {distribution_id}: {e}")
             raise
@@ -358,9 +361,13 @@ class CloudFront(Resources):
         )
         cloudfront_client = session.client('cloudfront')
 
-        response = cloudfront_client.get_distribution_config(Id=distribution_id)
-        distribution_config = response['DistributionConfig']
-        etag = response['ETag']
+        try:
+            response = cloudfront_client.get_distribution_config(Id=distribution_id)
+            distribution_config = response['DistributionConfig']
+            etag = response['ETag']
+        except cloudfront_client.exceptions.NoSuchDistribution:
+            print(f"CloudFront Distribution {distribution_id} existiert nicht")
+            return
 
         if distribution_config['Enabled']:
             print(f"Distribution {distribution_id} ist enabled. Deaktiviere sie zuerst...")

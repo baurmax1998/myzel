@@ -16,35 +16,26 @@ app = AwsApp(name="example_1", env=AwsEnviroment(profile=os.getenv("AWS_PROFILE"
                                                  account=os.getenv("AWS_ACCOUNT"),
                                                  region=os.getenv("AWS_REGION")), constructs={})
 
-# S3 Bucket erstellen
-my_bucket = S3(bucket_name="my-example-testmb-bucket-22", policy={
-    "Version": "2008-10-17",
-    "Id": "PolicyForCloudFrontPrivateContent",
-    "Statement": [{
-        "Sid": "AllowCloudFrontServicePrincipal",
-        "Effect": "Allow",
-        "Principal": {"Service": "cloudfront.amazonaws.com"},
-        "Action": "s3:GetObject",
-        "Resource": "arn:aws:s3:::my-example-testmb-bucket-22/*"
-    }]
-}, env=app.env)
-app.constructs["my-bucket"] = my_bucket
-
-app.constructs["website"] = S3Deploy(
-    bucket_name=my_bucket.bucket_name,
-    local_path="./web/",
-    s3_path="",
+# IAM Roles zuerst erstellen
+hello_role = IamRole(
+    role_name="hallo-welt-lambda-role",
+    assume_role_policy={
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "lambda.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }]
+    },
+    managed_policies=[
+        "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+    ],
+    description="IAM Role für Hello Lambda",
     env=app.env
 )
-
-# DynamoDB Todo Table
-todo_table = DynamoDB(
-    table_name="todos",
-    partition_key={'name': 'id', 'type': 'S'},
-    billing_mode="PAY_PER_REQUEST",
-    env=app.env
-)
-app.constructs["todo-table"] = todo_table
+app.constructs["hello-role"] = hello_role
 
 lambda_role = IamRole(
     role_name="lambda-todo-role",
@@ -81,18 +72,50 @@ lambda_role = IamRole(
     description="IAM Role für Lambda Functions mit DynamoDB Zugriff",
     env=app.env
 )
-app.constructs["lambda-role"] = lambda_role
+app.constructs["01-hello-role"] = hello_role
+app.constructs["02-lambda-role"] = lambda_role
 
-app.constructs["lambda-hello"] = LambdaFunction(
+# DynamoDB Todo Table
+todo_table = DynamoDB(
+    table_name="todos",
+    partition_key={'name': 'id', 'type': 'S'},
+    billing_mode="PAY_PER_REQUEST",
+    env=app.env
+)
+app.constructs["03-todo-table"] = todo_table
+
+# S3 Bucket erstellen
+my_bucket = S3(bucket_name="my-example-testmb-bucket-22", policy={
+    "Version": "2008-10-17",
+    "Id": "PolicyForCloudFrontPrivateContent",
+    "Statement": [{
+        "Sid": "AllowCloudFrontServicePrincipal",
+        "Effect": "Allow",
+        "Principal": {"Service": "cloudfront.amazonaws.com"},
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::my-example-testmb-bucket-22/*"
+    }]
+}, env=app.env)
+app.constructs["04-my-bucket"] = my_bucket
+
+app.constructs["05-website"] = S3Deploy(
+    bucket_name=my_bucket.bucket_name,
+    local_path="./web/",
+    s3_path="",
+    env=app.env
+)
+
+# Lambda Functions
+app.constructs["10-lambda-hello"] = LambdaFunction(
     function_name="hallo-welt",
     handler="lambda_function.lambda_handler",
     runtime="python3.13",
     code_path="./functions/hallo_welt",
-    role_arn=lambda_role.get_arn(),
+    role_arn=hello_role.get_arn(),
     env=app.env
 )
 
-app.constructs["lambda-todo-create"] = LambdaFunction(
+app.constructs["11-lambda-todo-create"] = LambdaFunction(
     function_name="todo-create",
     handler="lambda_function.lambda_handler",
     runtime="python3.13",
@@ -102,7 +125,7 @@ app.constructs["lambda-todo-create"] = LambdaFunction(
     env=app.env
 )
 
-app.constructs["lambda-todo-list"] = LambdaFunction(
+app.constructs["12-lambda-todo-list"] = LambdaFunction(
     function_name="todo-list",
     handler="lambda_function.lambda_handler",
     runtime="python3.13",
@@ -112,7 +135,7 @@ app.constructs["lambda-todo-list"] = LambdaFunction(
     env=app.env
 )
 
-app.constructs["lambda-todo-update"] = LambdaFunction(
+app.constructs["13-lambda-todo-update"] = LambdaFunction(
     function_name="todo-update",
     handler="lambda_function.lambda_handler",
     runtime="python3.13",
@@ -122,7 +145,7 @@ app.constructs["lambda-todo-update"] = LambdaFunction(
     env=app.env
 )
 
-app.constructs["lambda-todo-delete"] = LambdaFunction(
+app.constructs["14-lambda-todo-delete"] = LambdaFunction(
     function_name="todo-delete",
     handler="lambda_function.lambda_handler",
     runtime="python3.13",
@@ -132,6 +155,7 @@ app.constructs["lambda-todo-delete"] = LambdaFunction(
     env=app.env
 )
 
+# API Gateway
 api_gateway = ApiGateway(
     api_name="my-app-api",
     routes={
@@ -150,12 +174,12 @@ api_gateway = ApiGateway(
             "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:todo-create",
             "lambda_name": "todo-create"
         },
-        "/api/todos/{{id}}": {
+        "/api/todos/{id}": {
             "method": "PUT",
             "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:todo-update",
             "lambda_name": "todo-update"
         },
-        "/api/todos/{{id}}/delete": {
+        "/api/todos/{id}": {
             "method": "DELETE",
             "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:todo-delete",
             "lambda_name": "todo-delete"
@@ -164,9 +188,10 @@ api_gateway = ApiGateway(
     description="API Gateway für App",
     env=app.env
 )
-app.constructs["api-gateway"] = api_gateway
+app.constructs["20-api-gateway"] = api_gateway
 
-app.constructs["cloudfront"] = CloudFront(
+# CloudFront
+app.constructs["30-cloudfront"] = CloudFront(
     bucket_name=my_bucket.bucket_name,
     api_gateway_endpoint=f"https://uvjfr5s7d6.execute-api.{app.env.region}.amazonaws.com",
     env=app.env
@@ -174,4 +199,4 @@ app.constructs["cloudfront"] = CloudFront(
 
 
 
-deploy(app)
+destroy(app)

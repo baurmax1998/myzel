@@ -62,6 +62,15 @@ class LambdaFunction(Resources):
                 timeout=config['Timeout'],
                 memory_size=config['MemorySize']
             )
+        except lambda_client.exceptions.ResourceNotFoundException:
+            return cls(
+                function_name=function_name,
+                handler="index.handler",
+                runtime="python3.13",
+                code_path="",
+                role_arn="",
+                env=env
+            )
         except Exception as e:
             print(f"Fehler beim Abrufen der Lambda Function {function_name}: {e}")
             raise
@@ -146,6 +155,14 @@ class LambdaFunction(Resources):
             print(f"Warte auf Code Update Abschluss...")
             new_value._wait_for_function_update(lambda_client, function_name)
 
+            iam_client = session.client('iam')
+            current_config = lambda_client.get_function(FunctionName=function_name)
+            current_role = current_config['Configuration']['Role']
+
+            if current_role != new_value.role_arn:
+                print(f"Role wird geändert, warte auf Propagation...")
+                new_value._wait_for_role_propagation(iam_client)
+
             config_updates = {
                 'FunctionName': function_name,
                 'Runtime': new_value.runtime,
@@ -184,6 +201,8 @@ class LambdaFunction(Resources):
         try:
             lambda_client.delete_function(FunctionName=function_name)
             print(f"Lambda Function gelöscht: {function_name}")
+        except lambda_client.exceptions.ResourceNotFoundException:
+            print(f"Lambda Function existiert nicht: {function_name}")
         except Exception as e:
             print(f"Fehler beim Löschen der Lambda Function: {e}")
             raise

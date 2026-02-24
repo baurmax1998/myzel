@@ -69,6 +69,12 @@ class DynamoDB(Resources):
                 stream_enabled=table.get('StreamSpecification', {}).get('StreamEnabled', False),
                 env=env
             )
+        except dynamodb_client.exceptions.ResourceNotFoundException:
+            return cls(
+                table_name=table_name,
+                partition_key={'name': 'id', 'type': 'S'},
+                env=env
+            )
         except Exception as e:
             print(f"Fehler beim Abrufen der DynamoDB Tabelle {table_name}: {e}")
             raise
@@ -193,6 +199,8 @@ class DynamoDB(Resources):
             waiter.wait(TableName=table_name)
             print("Tabelle wurde gelöscht")
 
+        except dynamodb_client.exceptions.ResourceNotFoundException:
+            print(f"DynamoDB Tabelle existiert nicht: {table_name}")
         except Exception as e:
             print(f"Fehler beim Löschen der DynamoDB Tabelle: {e}")
             raise

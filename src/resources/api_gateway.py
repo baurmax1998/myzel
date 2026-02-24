@@ -80,6 +80,17 @@ class ApiGateway(Resources):
             if existing_api:
                 print(f"API Gateway existiert bereits: {self.api_name}")
                 api_id = existing_api['ApiId']
+
+                # Lösche existierende Routes und Integrationen
+                existing_routes = apigateway_client.get_routes(ApiId=api_id)
+                for route in existing_routes['Items']:
+                    apigateway_client.delete_route(ApiId=api_id, RouteId=route['RouteId'])
+                    print(f"  Route gelöscht: {route['RouteKey']}")
+
+                existing_integrations = apigateway_client.get_integrations(ApiId=api_id)
+                for integration in existing_integrations['Items']:
+                    apigateway_client.delete_integration(ApiId=api_id, IntegrationId=integration['IntegrationId'])
+                    print(f"  Integration gelöscht")
             else:
                 api_config = {
                     'Name': self.api_name,
@@ -145,7 +156,7 @@ class ApiGateway(Resources):
             try:
                 lambda_client.add_permission(
                     FunctionName=lambda_name,
-                    StatementId=f"apigateway-{api_id}-{method}-{route_path.replace('/', '-')}",
+                    StatementId=f"apigateway-{api_id}-{method}-{route_path.replace('/', '-').replace('{', '').replace('}', '')}",
                     Action='lambda:InvokeFunction',
                     Principal='apigateway.amazonaws.com',
                     SourceArn=source_arn

@@ -1,6 +1,7 @@
 import json
 
 import boto3
+from botocore.exceptions import ClientError
 
 from src.model import AwsEnviroment, Resources
 from src.model.registry import register_resource
@@ -34,6 +35,10 @@ class S3(Resources):
         try:
             s3_client.head_bucket(Bucket=bucket_name)
             return cls(bucket_name=bucket_name, env=env)
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return cls(bucket_name=bucket_name, env=env)
+            raise
         except Exception as e:
             print(f"Fehler beim Abrufen des Buckets {bucket_name}: {e}")
             raise
@@ -151,6 +156,11 @@ class S3(Resources):
         s3_client = session.client('s3')
 
         try:
+            # Prüfe ob Bucket existiert
+            if not self._bucket_exists(bucket_name, s3_client):
+                print(f"S3 Bucket '{bucket_name}' existiert nicht")
+                return
+
             # Lösche alle Objekte im Bucket
             paginator = s3_client.get_paginator('list_objects_v2')
             pages = paginator.paginate(Bucket=bucket_name)

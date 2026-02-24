@@ -57,6 +57,12 @@ class IamRole(Resources):
                 inline_policies=inline_policies,
                 description=role.get('Description', '')
             )
+        except iam_client.exceptions.NoSuchEntityException:
+            return cls(
+                role_name=role_name,
+                assume_role_policy={},
+                env=env
+            )
         except Exception as e:
             print(f"Fehler beim Abrufen der IAM Role {role_name}: {e}")
             raise
@@ -193,6 +199,8 @@ class IamRole(Resources):
             iam_client.delete_role(RoleName=role_name)
             print(f"IAM Role gelöscht: {role_name}")
 
+        except iam_client.exceptions.NoSuchEntityException:
+            print(f"IAM Role existiert nicht: {role_name}")
         except Exception as e:
             print(f"Fehler beim Löschen der IAM Role: {e}")
             raise
