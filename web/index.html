@@ -258,7 +258,7 @@
 
         async function toggleTodo(id, completed) {
             try {
-                const response = await fetch(`/api/todos/${id}`, {
+                const response = await fetch(`/api/todos/${id}/update`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -283,7 +283,7 @@
             }
 
             try {
-                const response = await fetch(`/api/todos/${id}`, {
+                const response = await fetch(`/api/todos/${id}/delete`, {
                     method: 'DELETE'
                 });
 

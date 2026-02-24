@@ -135,6 +135,16 @@ app.constructs["12-lambda-todo-list"] = LambdaFunction(
     env=app.env
 )
 
+app.constructs["13-lambda-todo-update"] = LambdaFunction(
+    function_name="todo-update",
+    handler="lambda_function.lambda_handler",
+    runtime="python3.13",
+    code_path="./functions/todo_update",
+    role_arn=lambda_role.get_arn(),
+    environment_variables={"TABLE_NAME": "todos"},
+    env=app.env
+)
+
 app.constructs["14-lambda-todo-delete"] = LambdaFunction(
     function_name="todo-delete",
     handler="lambda_function.lambda_handler",
@@ -164,7 +174,12 @@ api_gateway = ApiGateway(
             "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:todo-create",
             "lambda_name": "todo-create"
         },
-        "/api/todos/{id}": {
+        "/api/todos/{id}/update": {
+            "method": "PUT",
+            "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:todo-update",
+            "lambda_name": "todo-update"
+        },
+        "/api/todos/{id}/delete": {
             "method": "DELETE",
             "lambda_arn": f"arn:aws:lambda:{app.env.region}:{app.env.account}:function:todo-delete",
             "lambda_name": "todo-delete"

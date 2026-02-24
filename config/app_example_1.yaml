@@ -1,4 +1,7 @@
 resources:
+  13-lambda-todo-update:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-update
   hello-role:
     type: iam_role
     tech_id: arn:aws:iam::745243048623:role/hallo-welt-lambda-role
