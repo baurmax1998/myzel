@@ -196,10 +196,23 @@ class CloudFront(Resources):
 
         distribution = response['Distribution']
         arn = distribution['ARN']
+        distribution_id = distribution['Id']
 
-        print(f"CloudFront Distribution erstellt: {distribution['Id']}")
+        print(f"CloudFront Distribution erstellt: {distribution_id}")
         print(f"Domain Name: {distribution['DomainName']}")
         print(f"Status: {distribution['Status']}")
+
+        print("Warte auf Deployment...")
+        while True:
+            response = cloudfront_client.get_distribution(Id=distribution_id)
+            status = response['Distribution']['Status']
+            print(f"Status: {status}")
+
+            if status == 'Deployed':
+                print("CloudFront Distribution ist deployed")
+                break
+
+            time.sleep(30)
 
         return arn
 

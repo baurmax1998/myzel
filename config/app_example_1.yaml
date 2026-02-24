@@ -1,1 +1,40 @@
-resources: {}
+resources:
+  hello-role:
+    type: iam_role
+    tech_id: arn:aws:iam::745243048623:role/hallo-welt-lambda-role
+  01-hello-role:
+    type: iam_role
+    tech_id: arn:aws:iam::745243048623:role/hallo-welt-lambda-role
+  02-lambda-role:
+    type: iam_role
+    tech_id: arn:aws:iam::745243048623:role/lambda-todo-role
+  03-todo-table:
+    type: dynamodb
+    tech_id: arn:aws:dynamodb:eu-central-1:745243048623:table/todos
+  04-my-bucket:
+    type: s3
+    tech_id: arn:aws:s3:::my-example-testmb-bucket-22
+  05-website:
+    type: s3_deploy
+    tech_id: s3://my-example-testmb-bucket-22
+  10-lambda-hello:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:hallo-welt
+  11-lambda-todo-create:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-create
+  12-lambda-todo-list:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-list
+  13-lambda-todo-update:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-update
+  14-lambda-todo-delete:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:todo-delete
+  20-api-gateway:
+    type: api_gateway
+    tech_id: https://r5kaifpzh4.execute-api.eu-central-1.amazonaws.com
+  30-cloudfront:
+    type: cloudfront
+    tech_id: arn:aws:cloudfront::745243048623:distribution/E191U1J2N3BB4S

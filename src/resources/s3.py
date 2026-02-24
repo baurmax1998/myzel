@@ -200,8 +200,9 @@ class S3(Resources):
             try:
                 response = s3_client.get_bucket_policy(Bucket=self.bucket_name)
                 existing_policy = json.loads(response['Policy'])
-            except s3_client.exceptions.NoSuchBucketPolicy:
-                pass
+            except ClientError as e:
+                if e.response['Error']['Code'] != 'NoSuchBucketPolicy':
+                    raise
 
             new_policy_str = json.dumps(self.policy)
 

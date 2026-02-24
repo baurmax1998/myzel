@@ -199,4 +199,4 @@ app.constructs["30-cloudfront"] = CloudFront(
 
 
 
-destroy(app)
+deploy(app)

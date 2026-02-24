@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hallo Welt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(ellipse at center, #2a3620 0%, #1a2410 50%, #000000 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            background-size: 100% 100%;
+            transition: background-position 0.1s ease-out;
+            filter: brightness(var(--brightness, 1));
+        }
+
+        .container {
+            text-align: center;
+            background: black;
+            padding: 60px 40px;
+            border-radius: 20px;
+            box-shadow:
+                0 0 30px rgba(150, 180, 50, 0.8),
+                0 0 50px rgba(150, 180, 50, 0.5),
+                0 8px 20px rgba(0, 0, 0, 0.15);
+            animation: slideIn 0.6s ease-out;
+            position: relative;
+            z-index: 1;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            color: #b8d450;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #c8f050 0%, #a8d850 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow:
+                0 0 10px rgba(150, 180, 50, 0.5),
+                0 0 20px rgba(150, 180, 50, 0.2);
+            filter: drop-shadow(0 0 5px rgba(150, 180, 50, 0.3));
+        }
+
+        p {
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .input-group {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            border: 2px solid #a8d850;
+            border-radius: 10px;
+            background: #1a1a1a;
+            color: #b8d450;
+            outline: none;
+            transition: all 0.3s ease;
+            min-width: 250px;
+        }
+
+        input[type="text"]:focus {
+            border-color: #c8f050;
+            box-shadow: 0 0 15px rgba(150, 180, 50, 0.5);
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1.1em;
+            background: linear-gradient(135deg, #c8f050 0%, #a8d850 100%);
+            color: black;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(150, 180, 50, 0.4);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(150, 180, 50, 0.6);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #response {
+            margin-top: 30px;
+            padding: 20px;
+            background: #1a1a1a;
+            border-radius: 10px;
+            border: 2px solid #a8d850;
+            color: #b8d450;
+            font-size: 1.5em;
+            min-height: 60px;
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        #response.show {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+
+        .container {
+            z-index: 2;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hallo Welt</h1>
+        <p>Willkommen!</p>
+
+        <div class="input-group">
+            <input type="text" id="nameInput" placeholder="Gib deinen Namen ein..." />
+            <button onclick="sayHello()">Sag Hallo!</button>
+        </div>
+
+        <div id="response"></div>
+    </div>
+
+    <script>
+        async function sayHello() {
+            const nameInput = document.getElementById('nameInput');
+            const responseDiv = document.getElementById('response');
+            const name = nameInput.value.trim() || 'Welt';
+
+            responseDiv.classList.remove('show');
+            responseDiv.textContent = 'Lädt...';
+            responseDiv.classList.add('show');
+
+            try {
+                const response = await fetch(`/api/hello?name=${encodeURIComponent(name)}`);
+                const data = await response.json();
+
+                responseDiv.textContent = data.message;
+            } catch (error) {
+                responseDiv.textContent = 'Fehler beim Laden: ' + error.message;
+            }
+        }
+
+        document.getElementById('nameInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sayHello();
+            }
+        });
+    </script>
+</body>
+</html>
