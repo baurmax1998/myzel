@@ -176,6 +176,10 @@ class DynamoDB(Resources):
             print(f"DynamoDB Tabelle {table_name} ist bereits aktuell")
             return arn
 
+        except dynamodb_client.exceptions.ResourceNotFoundException:
+            print(f"DynamoDB Tabelle {table_name} existiert nicht, erstelle neue...")
+            return new_value.create()
+
         except Exception as e:
             print(f"Fehler beim Update der DynamoDB Tabelle: {e}")
             raise

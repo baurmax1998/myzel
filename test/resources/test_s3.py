@@ -21,9 +21,14 @@ def test_s3():
             "Statement": [
                 {
                     "Effect": "Allow",
-                    "Principal": "*",
-                    "Action": "s3:GetObject",
-                    "Resource": "arn:aws:s3:::test-myzel-s3-bucket-123456/*"
+                    "Principal": {
+                        "AWS": f"arn:aws:iam::{env.account}:root"
+                    },
+                    "Action": "s3:*",
+                    "Resource": [
+                        "arn:aws:s3:::test-myzel-s3-bucket-123456",
+                        "arn:aws:s3:::test-myzel-s3-bucket-123456/*"
+                    ]
                 }
             ]
         }

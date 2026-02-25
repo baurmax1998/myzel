@@ -120,7 +120,7 @@ class S3(Resources):
                 raise Exception(f"Ziel-Bucket '{new_bucket_name}' ist nicht leer")
 
             # 3. Sync Inhalte vom alten zum neuen Bucket
-            if deployed_bucket_name:
+            if deployed_bucket_name and self._bucket_exists(deployed_bucket_name, s3_client):
                 print(f"Synce Inhalte von '{deployed_bucket_name}' zu '{new_bucket_name}'")
                 paginator = s3_client.get_paginator('list_objects_v2')
                 pages = paginator.paginate(Bucket=deployed_bucket_name)
@@ -133,10 +133,11 @@ class S3(Resources):
                             s3_client.copy_object(CopySource=copy_source, Bucket=new_bucket_name, Key=key)
                             print(f"  Kopiert: {key}")
 
-            # 4. Lösche alten Bucket
-            if deployed_bucket_name:
+                # 4. Lösche alten Bucket
                 print(f"Lösche alten S3 Bucket '{deployed_bucket_name}'")
                 s3_client.delete_bucket(Bucket=deployed_bucket_name)
+            elif deployed_bucket_name:
+                print(f"Alten S3 Bucket '{deployed_bucket_name}' existiert nicht, überspringe Sync")
 
             arn = f"arn:aws:s3:::{new_bucket_name}"
             print(f"S3 Bucket erfolgreich von '{deployed_bucket_name}' zu '{new_bucket_name}' migriert")

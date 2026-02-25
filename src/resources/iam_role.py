@@ -142,32 +142,31 @@ class IamRole(Resources):
         try:
             response = iam_client.get_role(RoleName=role_name)
             arn = response['Role']['Arn']
+        except iam_client.exceptions.NoSuchEntityException:
+            print(f"IAM Role {role_name} existiert nicht, erstelle neue...")
+            return new_value.create()
 
-            current_assume_policy = json.dumps(response['Role']['AssumeRolePolicyDocument'], sort_keys=True)
-            new_assume_policy = json.dumps(new_value.assume_role_policy, sort_keys=True)
+        current_assume_policy = json.dumps(response['Role']['AssumeRolePolicyDocument'], sort_keys=True)
+        new_assume_policy = json.dumps(new_value.assume_role_policy, sort_keys=True)
 
-            if current_assume_policy != new_assume_policy:
-                iam_client.update_assume_role_policy(
-                    RoleName=role_name,
-                    PolicyDocument=json.dumps(new_value.assume_role_policy)
-                )
-                print(f"Assume Role Policy aktualisiert: {role_name}")
+        if current_assume_policy != new_assume_policy:
+            iam_client.update_assume_role_policy(
+                RoleName=role_name,
+                PolicyDocument=json.dumps(new_value.assume_role_policy)
+            )
+            print(f"Assume Role Policy aktualisiert: {role_name}")
 
-            new_value._sync_policies(iam_client)
+        new_value._sync_policies(iam_client)
 
-            if new_value.description and new_value.description != response['Role'].get('Description', ''):
-                iam_client.update_role_description(
-                    RoleName=role_name,
-                    Description=new_value.description
-                )
-                print(f"Description aktualisiert: {role_name}")
+        if new_value.description and new_value.description != response['Role'].get('Description', ''):
+            iam_client.update_role_description(
+                RoleName=role_name,
+                Description=new_value.description
+            )
+            print(f"Description aktualisiert: {role_name}")
 
-            print(f"IAM Role erfolgreich aktualisiert: {role_name}")
-            return arn
-
-        except Exception as e:
-            print(f"Fehler beim Update der IAM Role: {e}")
-            raise
+        print(f"IAM Role erfolgreich aktualisiert: {role_name}")
+        return arn
 
     def delete(self, tech_id: str):
         """Lösche eine IAM Role"""

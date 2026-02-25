@@ -140,6 +140,12 @@ class LambdaFunction(Resources):
         )
         lambda_client = session.client('lambda')
 
+        try:
+            lambda_client.get_function(FunctionName=function_name)
+        except lambda_client.exceptions.ResourceNotFoundException:
+            print(f"Lambda Function {function_name} existiert nicht, erstelle neue...")
+            return new_value.create()
+
         zip_file = new_value._create_deployment_package()
 
         try:

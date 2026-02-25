@@ -56,6 +56,12 @@ class ApiGateway(Resources):
                 env=env,
                 description=response.get('Description', '')
             )
+        except apigateway_client.exceptions.NotFoundException:
+            return cls(
+                api_name="",
+                routes={},
+                env=env
+            )
         except Exception as e:
             print(f"Fehler beim Abrufen des API Gateway {api_id}: {e}")
             raise
@@ -164,6 +170,8 @@ class ApiGateway(Resources):
                 print(f"  Lambda Permission hinzugefügt für {lambda_name}")
             except lambda_client.exceptions.ResourceConflictException:
                 print(f"  Lambda Permission existiert bereits für {lambda_name}")
+            except lambda_client.exceptions.ResourceNotFoundException as e:
+                print(f"  Warnung: Lambda Funktion {lambda_name} nicht gefunden, überspringe Permission: {e}")
 
     def update(self, deployed_tech_id: str, new_value: 'ApiGateway') -> str:
         """Update ein API Gateway"""
@@ -183,7 +191,8 @@ class ApiGateway(Resources):
                     break
 
             if not api_id:
-                raise Exception(f"API Gateway {new_value.api_name} nicht gefunden")
+                print(f"API Gateway {new_value.api_name} existiert nicht, erstelle neue...")
+                return new_value.create()
 
             existing_routes = apigateway_client.get_routes(ApiId=api_id)
             for route in existing_routes['Items']:

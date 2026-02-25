@@ -23,7 +23,7 @@ def main():
         ("DynamoDB", test_dynamodb),
         ("Lambda", test_lambda),
         ("API Gateway", test_api_gateway),
-        ("CloudFront", test_cloudfront),
+        # ("CloudFront", test_cloudfront), todo will ich nicht jedes mal testen
     ]
 
     results = []

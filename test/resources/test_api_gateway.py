@@ -8,6 +8,7 @@ from test.resources.env_helper import load_env
 
 def test_api_gateway():
     """Testet API Gateway Resource"""
+    import time
     env = load_env()
 
     tester = ResourceTester(env)
@@ -36,9 +37,10 @@ def test_api_gateway():
     try:
         role_arn = iam_role.create()
         print(f"Created IAM Role: {role_arn}\n")
+        time.sleep(2)  # Wait for role to propagate
     except Exception as e:
         print(f"Using existing IAM Role: {e}\n")
-        role_arn = f"arn:aws:iam::745243048623:role/test-myzel-api-lambda-role-123456"
+        role_arn = f"arn:aws:iam::{env.account}:role/test-myzel-api-lambda-role-123456"
 
     # Create Lambda Function
     lambda_function = LambdaFunction(
@@ -53,9 +55,10 @@ def test_api_gateway():
     try:
         lambda_arn = lambda_function.create()
         print(f"Created Lambda: {lambda_arn}\n")
+        time.sleep(3)  # Wait for Lambda to be fully ready
     except Exception as e:
         print(f"Using existing Lambda: {e}\n")
-        lambda_arn = f"arn:aws:lambda:eu-central-1:745243048623:function:test-myzel-api-lambda-123456"
+        lambda_arn = f"arn:aws:lambda:{env.region}:{env.account}:function:test-myzel-api-lambda-123456"
 
     lambda_name = "test-myzel-api-lambda-123456"
 
