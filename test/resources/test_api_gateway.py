@@ -43,11 +43,13 @@ def test_api_gateway():
         role_arn = f"arn:aws:iam::{env.account}:role/test-myzel-api-lambda-role-123456"
 
     # Create Lambda Function
+    code_path = Path(__file__).parent.parent.parent / "functions" / "hallo_welt"
+
     lambda_function = LambdaFunction(
         function_name="test-myzel-api-lambda-123456",
         handler="index.handler",
         runtime="python3.13",
-        code_path=Path("functions/hallo_welt"),
+        code_path=code_path,
         role_arn=role_arn,
         env=env
     )

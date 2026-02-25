@@ -1,3 +1,4 @@
+import time
 from pathlib import Path
 from src.resources.lambda_function import LambdaFunction
 from src.resources.iam_role import IamRole
@@ -35,16 +36,19 @@ def test_lambda():
     try:
         role_arn = iam_role.create()
         print(f"Created IAM Role: {role_arn}\n")
+        time.sleep(5)  # Wait longer for role to fully propagate
     except Exception as e:
         print(f"Using existing IAM Role: {e}\n")
         role_arn = f"arn:aws:iam::745243048623:role/test-myzel-lambda-role-123456"
 
     # Test Lambda with simple code path
+    code_path = Path(__file__).parent.parent.parent / "functions" / "hallo_welt"
+
     lambda_resource = LambdaFunction(
         function_name="test-myzel-lambda-123456",
         handler="index.handler",
         runtime="python3.13",
-        code_path=Path("functions/hallo_welt"),
+        code_path=code_path,
         role_arn=role_arn,
         env=env
     )
@@ -53,7 +57,7 @@ def test_lambda():
         function_name="test-myzel-lambda-123456",
         handler="index.handler",
         runtime="python3.13",
-        code_path=Path("functions/hallo_welt"),
+        code_path=code_path,
         role_arn=role_arn,
         env=env,
         timeout=60,

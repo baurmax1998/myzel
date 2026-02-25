@@ -254,11 +254,12 @@ class LambdaFunction(Resources):
         import time
         role_name = self.role_arn.split('/')[-1]
 
-        max_attempts = 10
+        max_attempts = 15
         for attempt in range(max_attempts):
             try:
                 iam_client.get_role(RoleName=role_name)
-                time.sleep(2)
+                # Extra wait to ensure role is fully propagated
+                time.sleep(3)
                 print(f"IAM Role verfügbar")
                 return
             except Exception as e:
