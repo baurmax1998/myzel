@@ -36,18 +36,22 @@ class TransactionalDeploymentContext:
                 print(f"[DEPLOY] Updating: {resource_id} ({resource_class_name})")
                 new_tech_id = deployed.update(tech_id, resource)
                 tech_id = new_tech_id if new_tech_id is not None else tech_id
+                resource.set_tech_id(tech_id)
                 print(f"[DEPLOY] ✓ Updated: {resource_id} → {tech_id}")
             else:
                 print(f"[DEPLOY] No changes: {resource_id} ({resource_class_name})")
+                # Set tech_id from deployed state
+                resource.set_tech_id(tech_id)
         else:
             # Create new resource
             print(f"[DEPLOY] Creating: {resource_id} ({resource_class_name})")
             tech_id = resource.create()
+            resource.set_tech_id(tech_id)
             print(f"[DEPLOY] ✓ Created: {resource_id} → {tech_id}")
         self.new_deployed_state[resource_id] = resource
         self.new_iac_mapping.resources[resource_id] = ResourceMapping(
             type=resource_type,
-            tech_id=tech_id
+            tech_id=resource.get_tech_id()
         )
         self.deployment_progress.total_deployed += 1
         self.deployment_progress.deployed_resource_ids.append(resource_id)

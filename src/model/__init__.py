@@ -32,6 +32,16 @@ class Resources(ABC):
     All implementations MUST be idempotent and handle graceful degradation.
     """
 
+    _tech_id: Optional[str] = None
+
+    def get_tech_id(self) -> Optional[str]:
+        """Get the technical identifier of this resource instance"""
+        return self._tech_id
+
+    def set_tech_id(self, tech_id: str) -> None:
+        """Set the technical identifier of this resource instance"""
+        self._tech_id = tech_id
+
     @classmethod
     @abstractmethod
     def get(cls: Type[T], tech_id: str, env: AwsEnviroment) -> T:

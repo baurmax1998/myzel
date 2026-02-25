@@ -96,31 +96,38 @@ class IamRole(Resources):
 
         return arn
 
-    def _sync_policies(self, iam_client):
-        """Synchronisiere Policies mit gewünschtem Zustand"""
-        current_managed = iam_client.list_attached_role_policies(RoleName=self.role_name)
+    def _sync_policies(self, iam_client, role_name: str = None):
+        """Synchronisiere Policies mit gewünschtem Zustand
+
+        Args:
+            iam_client: boto3 IAM client
+            role_name: Optional role name to sync (defaults to self.role_name)
+        """
+        target_role_name = role_name or self.role_name
+
+        current_managed = iam_client.list_attached_role_policies(RoleName=target_role_name)
         current_policy_arns = {p['PolicyArn'] for p in current_managed['AttachedPolicies']}
         new_policy_arns = set(self.managed_policies)
 
         for policy_arn in current_policy_arns - new_policy_arns:
-            iam_client.detach_role_policy(RoleName=self.role_name, PolicyArn=policy_arn)
+            iam_client.detach_role_policy(RoleName=target_role_name, PolicyArn=policy_arn)
             print(f"  Managed Policy detached: {policy_arn}")
 
         for policy_arn in new_policy_arns - current_policy_arns:
-            iam_client.attach_role_policy(RoleName=self.role_name, PolicyArn=policy_arn)
+            iam_client.attach_role_policy(RoleName=target_role_name, PolicyArn=policy_arn)
             print(f"  Managed Policy attached: {policy_arn}")
 
-        current_inline = iam_client.list_role_policies(RoleName=self.role_name)
+        current_inline = iam_client.list_role_policies(RoleName=target_role_name)
         current_inline_names = set(current_inline['PolicyNames'])
         new_inline_names = set(self.inline_policies.keys())
 
         for policy_name in current_inline_names - new_inline_names:
-            iam_client.delete_role_policy(RoleName=self.role_name, PolicyName=policy_name)
+            iam_client.delete_role_policy(RoleName=target_role_name, PolicyName=policy_name)
             print(f"  Inline Policy gelöscht: {policy_name}")
 
         for policy_name in new_inline_names:
             iam_client.put_role_policy(
-                RoleName=self.role_name,
+                RoleName=target_role_name,
                 PolicyName=policy_name,
                 PolicyDocument=json.dumps(self.inline_policies[policy_name])
             )
@@ -131,7 +138,7 @@ class IamRole(Resources):
 
     def update(self, deployed_tech_id: str, new_value: 'IamRole') -> str:
         """Update eine IAM Role"""
-        role_name = self._extract_role_name(deployed_tech_id)
+        deployed_role_name = self._extract_role_name(deployed_tech_id)
 
         session = boto3.session.Session(
             profile_name=new_value.env.profile,
@@ -139,11 +146,16 @@ class IamRole(Resources):
         )
         iam_client = session.client('iam')
 
+        # If the role name changed, create a new role instead of updating
+        if deployed_role_name != new_value.role_name:
+            print(f"IAM Role name changed ({deployed_role_name} → {new_value.role_name}), erstelle neue...")
+            return new_value.create()
+
         try:
-            response = iam_client.get_role(RoleName=role_name)
+            response = iam_client.get_role(RoleName=deployed_role_name)
             arn = response['Role']['Arn']
         except iam_client.exceptions.NoSuchEntityException:
-            print(f"IAM Role {role_name} existiert nicht, erstelle neue...")
+            print(f"IAM Role {deployed_role_name} existiert nicht, erstelle neue...")
             return new_value.create()
 
         current_assume_policy = json.dumps(response['Role']['AssumeRolePolicyDocument'], sort_keys=True)
@@ -151,21 +163,21 @@ class IamRole(Resources):
 
         if current_assume_policy != new_assume_policy:
             iam_client.update_assume_role_policy(
-                RoleName=role_name,
+                RoleName=deployed_role_name,
                 PolicyDocument=json.dumps(new_value.assume_role_policy)
             )
-            print(f"Assume Role Policy aktualisiert: {role_name}")
+            print(f"Assume Role Policy aktualisiert: {deployed_role_name}")
 
-        new_value._sync_policies(iam_client)
+        new_value._sync_policies(iam_client, role_name=deployed_role_name)
 
         if new_value.description and new_value.description != response['Role'].get('Description', ''):
             iam_client.update_role_description(
-                RoleName=role_name,
+                RoleName=deployed_role_name,
                 Description=new_value.description
             )
-            print(f"Description aktualisiert: {role_name}")
+            print(f"Description aktualisiert: {deployed_role_name}")
 
-        print(f"IAM Role erfolgreich aktualisiert: {role_name}")
+        print(f"IAM Role erfolgreich aktualisiert: {deployed_role_name}")
         return arn
 
     def delete(self, tech_id: str):
@@ -205,7 +217,15 @@ class IamRole(Resources):
             raise
 
     def get_arn(self) -> str:
-        """Generiere ARN für diese Role"""
+        """Get ARN for this role
+
+        Returns the actual ARN from AWS if available (set via set_tech_id),
+        otherwise generates it from the role name.
+        """
+        # If we have a stored tech_id (actual ARN from AWS), use it
+        if self._tech_id:
+            return self._tech_id
+        # Otherwise generate from role name
         return f"arn:aws:iam::{self.env.account}:role/{self.role_name}"
 
     @staticmethod
