@@ -162,7 +162,7 @@ class Resources(ABC):
         pass
 
 @dataclass
-class AwsApp:
+class MyzelApp:
     name: str
     env: AwsEnviroment
     constructs: dict[str, Resources]

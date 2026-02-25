@@ -3,11 +3,11 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-from src.model import AwsApp, Resources, IacMapping, DiffResult
+from src.model import MyzelApp, Resources, IacMapping, DiffResult
 from src.model.registry import get_resource_class
 
 
-def diff(app: AwsApp, config_dir: Path = Path("config")) -> DiffResult:
+def diff(app: MyzelApp, config_dir: Path = Path("config")) -> DiffResult:
     config_dir.mkdir(parents=True, exist_ok=True)
     config_file = config_dir / f"app_{app.name}.yaml"
 

@@ -2,11 +2,11 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from src.model import AwsApp, Resources, IacMapping, ResourceMapping
+from src.model import MyzelApp, Resources, IacMapping, ResourceMapping
 from src.model.registry import get_resource_class, get_resource_type
 
 
-def deploy(app: AwsApp, config_dir: Path = Path("config")) -> IacMapping:
+def deploy(app: MyzelApp, config_dir: Path = Path("config")) -> IacMapping:
     config_dir.mkdir(parents=True, exist_ok=True)
     config_file = config_dir / f"app_{app.name}.yaml"
 

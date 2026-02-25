@@ -2,11 +2,11 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from src.model import AwsApp, IacMapping
+from src.model import MyzelApp, IacMapping
 from src.model.registry import get_resource_class
 
 
-def destroy(app: AwsApp, config_dir: Path = Path("config")) -> None:
+def destroy(app: MyzelApp, config_dir: Path = Path("config")) -> None:
     config_dir.mkdir(parents=True, exist_ok=True)
     config_file = config_dir / f"app_{app.name}.yaml"
 

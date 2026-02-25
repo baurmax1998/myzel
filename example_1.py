@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from src.core import deploy, diff, destroy
-from src.model import AwsEnviroment, AwsApp
+from src.model import AwsEnviroment, MyzelApp
 from src.resources.api_gateway import ApiGateway
 from src.resources.cloudfront import CloudFront
 from src.resources.dynamodb import DynamoDB
@@ -12,9 +12,9 @@ from src.resources.s3_deploy import S3Deploy
 
 load_dotenv()
 
-app = AwsApp(name="example_1", env=AwsEnviroment(profile=os.getenv("AWS_PROFILE"),
-                                                 account=os.getenv("AWS_ACCOUNT"),
-                                                 region=os.getenv("AWS_REGION")), constructs={})
+app = MyzelApp(name="example_1", env=AwsEnviroment(profile=os.getenv("AWS_PROFILE"),
+                                                   account=os.getenv("AWS_ACCOUNT"),
+                                                   region=os.getenv("AWS_REGION")), constructs={})
 
 # IAM Roles zuerst erstellen
 hello_role = IamRole(
