@@ -2,7 +2,7 @@ resources:
   hello-role:
     type: iam_role
     tech_id: arn:aws:iam::745243048623:role/simple-hallo-welt-lambda-role
-  10-lambda-hello:
+  hello-lambda:
     type: lambda
     tech_id: arn:aws:lambda:eu-central-1:745243048623:function:hallo-welt
 deployment_progress: null
