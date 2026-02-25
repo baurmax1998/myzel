@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
-from typing import TypeVar, Type, Dict
+from typing import TypeVar, Type, Dict, Optional
 
 import yaml
 from pydantic import BaseModel, Field
@@ -162,10 +163,45 @@ class Resources(ABC):
         pass
 
 @dataclass
+class DeploymentProgress:
+    """Tracks deployment progress for recovery on failure"""
+    total_deployed: int = 0
+    deployed_resource_ids: list[str] = field(default_factory=list)
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+
+
+@dataclass
 class MyzelApp:
     name: str
     env: AwsEnviroment
     constructs: dict[str, Resources]
+    current_config: Optional["IacMapping"] = None
+    current_state: dict[str, Resources] = field(default_factory=dict)
+    config_dir: Path = field(default_factory=lambda: Path("config"))
+
+    def __post_init__(self):
+        """Load existing config and state from AWS"""
+        if self.current_config is None:
+            self._load_current_state(self.config_dir)
+
+    def _load_current_state(self, config_dir: Path) -> None:
+        """Load current config and AWS state"""
+        config_dir.mkdir(parents=True, exist_ok=True)
+        config_file = config_dir / f"app_{self.name}.yaml"
+        self.current_config = IacMapping.from_yaml(config_file)
+
+        # Load current state from AWS
+        from src.model.registry import get_resource_class
+        for resource_id, resource_mapping in self.current_config.resources.items():
+            resource_class = get_resource_class(resource_mapping.type)
+            if resource_class:
+                resource = resource_class.get(resource_mapping.tech_id, self.env)
+                self.current_state[resource_id] = resource
+
+    def begin_deploy(self):
+        """Start a transactional deployment"""
+        from src.core.transactional_deploy import TransactionalDeploymentContext
+        return TransactionalDeploymentContext(self, self.config_dir)
 
 
 
@@ -176,6 +212,7 @@ class ResourceMapping(BaseModel):
 
 class IacMapping(BaseModel):
     resources: Dict[str, ResourceMapping] = Field(default_factory=dict)
+    deployment_progress: Optional[Dict] = Field(default=None)
 
     @classmethod
     def from_yaml(cls, path: Path) -> "IacMapping":
