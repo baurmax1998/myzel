@@ -1,9 +1,8 @@
 resources:
   hello-role:
     type: iam_role
-    tech_id: arn:aws:iam::745243048623:role/aa-simple-hallo-welt-lambda-role-rename
-deployment_progress:
-  total_deployed: 1
-  deployed_resource_ids:
-  - hello-role
-  timestamp: '2026-02-25T20:18:49.583861'
+    tech_id: arn:aws:iam::745243048623:role/aa-simple-hallo-welt-lambda-role-re
+  hello-lambda:
+    type: lambda
+    tech_id: arn:aws:lambda:eu-central-1:745243048623:function:aa-hallo-welt
+deployment_progress: null

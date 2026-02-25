@@ -19,7 +19,7 @@ app = MyzelApp(
 with app.begin_deploy() as deploy_ctx:
     # Create and deploy IAM role first
     hello_role = IamRole(
-        role_name="aa-simple-hallo-welt-lambda-role-rename",
+        role_name="aa-simple-hallo-welt-lambda-role-re",
         assume_role_policy={
             "Version": "2012-10-17",
             "Statement": [{

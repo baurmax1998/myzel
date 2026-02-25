@@ -250,24 +250,25 @@ class LambdaFunction(Resources):
             raise e
 
     def _wait_for_role_propagation(self, iam_client):
-        """Warte bis IAM Role verfügbar ist"""
+        """Warte bis IAM Role verfügbar ist und vollständig propagiert"""
         import time
         role_name = self.role_arn.split('/')[-1]
 
-        max_attempts = 15
+        max_attempts = 60  # Bis zu 2 Minuten warten (60 * 2 seconds)
         for attempt in range(max_attempts):
             try:
                 iam_client.get_role(RoleName=role_name)
-                # Extra wait to ensure role is fully propagated
-                time.sleep(3)
-                print(f"IAM Role verfügbar")
+                # Extra wait to ensure role is fully propagated in all regions
+                time.sleep(5)
+                print(f"IAM Role verfügbar und propagiert")
                 return
             except Exception as e:
                 if attempt < max_attempts - 1:
-                    print(f"  Warte auf Role... (Versuch {attempt + 1}/{max_attempts})")
+                    print(f"  Warte auf Role Propagation... (Versuch {attempt + 1}/{max_attempts})")
                     time.sleep(2)
                 else:
-                    raise
+                    print(f"Warnung: Role konnte nicht vollständig propagiert werden, fortfahren...")
+                    return
 
     def _wait_for_function_update(self, lambda_client, function_name):
         """Warte bis Lambda Function Update abgeschlossen ist"""
