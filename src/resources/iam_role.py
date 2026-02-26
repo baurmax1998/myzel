@@ -93,6 +93,7 @@ class IamRole(Resources):
             print(f"ARN: {arn}")
 
         self._sync_policies(iam_client)
+        self._wait_for_propagation(iam_client)
 
         return arn
 
@@ -177,6 +178,9 @@ class IamRole(Resources):
             )
             print(f"Description aktualisiert: {deployed_role_name}")
 
+        # Wait for role to be fully propagated after updates
+        new_value._wait_for_propagation(iam_client)
+
         print(f"IAM Role erfolgreich aktualisiert: {deployed_role_name}")
         return arn
 
@@ -215,6 +219,23 @@ class IamRole(Resources):
         except Exception as e:
             print(f"Fehler beim Löschen der IAM Role: {e}")
             raise
+
+    def _wait_for_propagation(self, iam_client):
+        """Warte bis IAM Role vollständig propagiert ist"""
+        import time
+        max_attempts = 60
+        for attempt in range(max_attempts):
+            try:
+                iam_client.get_role(RoleName=self.role_name)
+                if attempt > 0:
+                    print(f"IAM Role propagiert und bereit")
+                return
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    time.sleep(1)
+                else:
+                    print(f"Warnung: Role Propagation timeout, fortfahren...")
+                    return
 
     def get_arn(self) -> str:
         """Get ARN for this role

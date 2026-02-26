@@ -92,9 +92,6 @@ class LambdaFunction(Resources):
             return self.update(arn, self)
 
         except lambda_client.exceptions.ResourceNotFoundException:
-            print(f"Warte auf IAM Role Propagation...")
-            self._wait_for_role_propagation(iam_client)
-
             zip_file = self._create_deployment_package()
 
             try:
@@ -164,10 +161,6 @@ class LambdaFunction(Resources):
             iam_client = session.client('iam')
             current_config = lambda_client.get_function(FunctionName=function_name)
             current_role = current_config['Configuration']['Role']
-
-            if current_role != new_value.role_arn:
-                print(f"Role wird geändert, warte auf Propagation...")
-                new_value._wait_for_role_propagation(iam_client)
 
             config_updates = {
                 'FunctionName': function_name,
@@ -248,27 +241,6 @@ class LambdaFunction(Resources):
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
             raise e
-
-    def _wait_for_role_propagation(self, iam_client):
-        """Warte bis IAM Role verfügbar ist und vollständig propagiert"""
-        import time
-        role_name = self.role_arn.split('/')[-1]
-
-        max_attempts = 60  # Bis zu 2 Minuten warten (60 * 2 seconds)
-        for attempt in range(max_attempts):
-            try:
-                iam_client.get_role(RoleName=role_name)
-                # Extra wait to ensure role is fully propagated in all regions
-                time.sleep(5)
-                print(f"IAM Role verfügbar und propagiert")
-                return
-            except Exception as e:
-                if attempt < max_attempts - 1:
-                    print(f"  Warte auf Role Propagation... (Versuch {attempt + 1}/{max_attempts})")
-                    time.sleep(2)
-                else:
-                    print(f"Warnung: Role konnte nicht vollständig propagiert werden, fortfahren...")
-                    return
 
     def _wait_for_function_update(self, lambda_client, function_name):
         """Warte bis Lambda Function Update abgeschlossen ist"""
