@@ -92,6 +92,9 @@ class LambdaFunction(Resources):
             return self.update(arn, self)
 
         except lambda_client.exceptions.ResourceNotFoundException:
+            # Wait for role to be propagated before creating Lambda
+            self._wait_for_role_propagation(lambda_client, iam_client)
+
             zip_file = self._create_deployment_package()
 
             try:
@@ -242,6 +245,29 @@ class LambdaFunction(Resources):
                 shutil.rmtree(temp_dir)
             raise e
 
+    def _wait_for_role_propagation(self, lambda_client, iam_client):
+        """Warte bis IAM Role vollständig propagiert ist und von Lambda angenommen werden kann"""
+        import time
+
+        max_attempts = 120
+        for attempt in range(max_attempts):
+            try:
+                # Try to get the role - this ensures it exists
+                role_name = self.role_arn.split('/')[-1]
+                iam_client.get_role(RoleName=role_name)
+
+                if attempt > 0:
+                    print(f"IAM Role bereit für Lambda")
+                return
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    if attempt % 10 == 0 and attempt > 0:
+                        print(f"  Warte auf IAM Role Propagation... ({attempt}s)")
+                    time.sleep(1)
+                else:
+                    print(f"Warnung: IAM Role Propagation timeout nach {max_attempts}s, versuche trotzdem...")
+                    return
+
     def _wait_for_function_update(self, lambda_client, function_name):
         """Warte bis Lambda Function Update abgeschlossen ist"""
         import time
@@ -302,9 +328,24 @@ class LambdaFunction(Resources):
                 InvocationType=invocation_type,
                 Payload=json.dumps(payload or {})
             )
+
+            # For async invocations (Event), there's no payload returned
+            response_payload = None
+            if invocation_type == "Event":
+                # Async invocation doesn't return payload
+                response_payload = None
+            else:
+                # Sync invocation returns payload
+                payload_data = response.get('Payload', b'{}')
+                if hasattr(payload_data, 'read'):
+                    payload_str = payload_data.read()
+                    response_payload = json.loads(payload_str) if payload_str else None
+                else:
+                    response_payload = payload_data
+
             return {
                 'StatusCode': response['StatusCode'],
-                'Payload': json.loads(response.get('Payload', b'{}').read()) if hasattr(response.get('Payload', b'{}'), 'read') else response.get('Payload')
+                'Payload': response_payload
             }
         except Exception as e:
             print(f"Fehler beim Aufrufen der Lambda {self.function_name}: {e}")

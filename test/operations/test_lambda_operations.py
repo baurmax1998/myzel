@@ -36,7 +36,7 @@ def test_lambda_invoke():
         print("Creating IAM Role...")
         role_arn = iam_role.create()
         print(f"✓ IAM Role created: {role_arn}\n")
-        time.sleep(5)
+        time.sleep(10)
     except Exception as e:
         print(f"Using existing IAM Role: {e}\n")
         role_arn = f"arn:aws:iam::{env.account}:role/test-lambda-ops-role"
