@@ -214,5 +214,121 @@ class DynamoDB(Resources):
         """Extrahiere Table Name aus ARN"""
         return arn.split('/')[-1]
 
+    def put_item(self, item: dict) -> None:
+        """Put an item into the table
+
+        Args:
+            item: Dictionary with item data
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        dynamodb = session.resource('dynamodb')
+        table = dynamodb.Table(self.table_name)
+
+        try:
+            table.put_item(Item=item)
+            print(f"✓ Item hinzugefügt: {item}")
+        except Exception as e:
+            print(f"Fehler beim Hinzufügen des Items zu {self.table_name}: {e}")
+            raise
+
+    def get_item(self, key: dict) -> dict:
+        """Get an item from the table
+
+        Args:
+            key: Dictionary with partition key (and sort key if applicable)
+
+        Returns:
+            Item dictionary or None if not found
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        dynamodb = session.resource('dynamodb')
+        table = dynamodb.Table(self.table_name)
+
+        try:
+            response = table.get_item(Key=key)
+            item = response.get('Item')
+            print(f"✓ Item abgerufen: {item}")
+            return item
+        except Exception as e:
+            print(f"Fehler beim Abrufen des Items von {self.table_name}: {e}")
+            raise
+
+    def query(self, key_condition: dict, **kwargs) -> list:
+        """Query items from the table
+
+        Args:
+            key_condition: Key condition expression dictionary
+            **kwargs: Additional query parameters
+
+        Returns:
+            List of items matching the query
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        dynamodb = session.resource('dynamodb')
+        table = dynamodb.Table(self.table_name)
+
+        try:
+            response = table.query(**key_condition, **kwargs)
+            items = response.get('Items', [])
+            print(f"✓ {len(items)} Items gefunden")
+            return items
+        except Exception as e:
+            print(f"Fehler beim Abfragen von {self.table_name}: {e}")
+            raise
+
+    def scan(self, **kwargs) -> list:
+        """Scan all items in the table
+
+        Args:
+            **kwargs: Scan parameters (FilterExpression, etc.)
+
+        Returns:
+            List of all items
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        dynamodb = session.resource('dynamodb')
+        table = dynamodb.Table(self.table_name)
+
+        try:
+            response = table.scan(**kwargs)
+            items = response.get('Items', [])
+            print(f"✓ {len(items)} Items gescannt")
+            return items
+        except Exception as e:
+            print(f"Fehler beim Scannen von {self.table_name}: {e}")
+            raise
+
+    def delete_item(self, key: dict) -> None:
+        """Delete an item from the table
+
+        Args:
+            key: Dictionary with partition key (and sort key if applicable)
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        dynamodb = session.resource('dynamodb')
+        table = dynamodb.Table(self.table_name)
+
+        try:
+            table.delete_item(Key=key)
+            print(f"✓ Item gelöscht: {key}")
+        except Exception as e:
+            print(f"Fehler beim Löschen des Items von {self.table_name}: {e}")
+            raise
+
     def __repr__(self) -> str:
         return f"DynamoDB(table='{self.table_name}')"

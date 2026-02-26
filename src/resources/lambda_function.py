@@ -278,3 +278,34 @@ class LambdaFunction(Resources):
 
     def __repr__(self) -> str:
         return f"LambdaFunction(name='{self.function_name}', runtime='{self.runtime}')"
+
+    def invoke(self, payload: dict = None, invocation_type: str = "RequestResponse") -> dict:
+        """Invoke the Lambda function
+
+        Args:
+            payload: JSON payload to send to the Lambda (dict)
+            invocation_type: "RequestResponse" (sync) or "Event" (async)
+
+        Returns:
+            Response dict with StatusCode and Payload
+        """
+        import json
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        lambda_client = session.client('lambda')
+
+        try:
+            response = lambda_client.invoke(
+                FunctionName=self.function_name,
+                InvocationType=invocation_type,
+                Payload=json.dumps(payload or {})
+            )
+            return {
+                'StatusCode': response['StatusCode'],
+                'Payload': json.loads(response.get('Payload', b'{}').read()) if hasattr(response.get('Payload', b'{}'), 'read') else response.get('Payload')
+            }
+        except Exception as e:
+            print(f"Fehler beim Aufrufen der Lambda {self.function_name}: {e}")
+            raise

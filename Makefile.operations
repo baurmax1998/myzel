@@ -1,0 +1,22 @@
+.PHONY: test-operations test-lambda test-s3 test-dynamodb help
+
+help:
+	@echo "Operation Tests - Available targets:"
+	@echo ""
+	@echo "  make test-operations     - Run all operation tests"
+	@echo "  make test-lambda         - Run only Lambda operation tests"
+	@echo "  make test-s3             - Run only S3 operation tests"
+	@echo "  make test-dynamodb       - Run only DynamoDB operation tests"
+	@echo ""
+
+test-operations:
+	@python3 test/operations/run_all_tests.py
+
+test-lambda:
+	@python3 test/operations/test_lambda_operations.py
+
+test-s3:
+	@python3 test/operations/test_s3_operations.py
+
+test-dynamodb:
+	@python3 test/operations/test_dynamodb_operations.py

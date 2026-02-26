@@ -229,5 +229,101 @@ class S3(Resources):
             print(f"Fehler beim Anwenden der Bucket Policy: {e}")
             raise
 
+    def list(self, prefix: str = "") -> list:
+        """List all objects in the bucket
+
+        Args:
+            prefix: Filter by object key prefix
+
+        Returns:
+            List of object keys
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        s3_client = session.client('s3')
+
+        try:
+            paginator = s3_client.get_paginator('list_objects_v2')
+            pages = paginator.paginate(Bucket=self.bucket_name, Prefix=prefix)
+
+            objects = []
+            for page in pages:
+                if 'Contents' in page:
+                    for obj in page['Contents']:
+                        objects.append(obj['Key'])
+            return objects
+        except Exception as e:
+            print(f"Fehler beim Auflisten der Objekte in {self.bucket_name}: {e}")
+            raise
+
+    def upload(self, local_path: str, s3_key: str = None) -> None:
+        """Upload a file to the bucket
+
+        Args:
+            local_path: Path to local file
+            s3_key: S3 object key (if None, uses filename)
+        """
+        from pathlib import Path as PathlibPath
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        s3_client = session.client('s3')
+
+        try:
+            local_file = PathlibPath(local_path)
+            if not local_file.exists():
+                raise FileNotFoundError(f"Datei nicht gefunden: {local_path}")
+
+            key = s3_key or local_file.name
+            with open(local_path, 'rb') as f:
+                s3_client.put_object(Bucket=self.bucket_name, Key=key, Body=f)
+            print(f"✓ Hochgeladen: {local_path} → s3://{self.bucket_name}/{key}")
+        except Exception as e:
+            print(f"Fehler beim Hochladen zu {self.bucket_name}: {e}")
+            raise
+
+    def download(self, s3_key: str, local_path: str) -> None:
+        """Download an object from the bucket
+
+        Args:
+            s3_key: S3 object key
+            local_path: Local path to save file
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        s3_client = session.client('s3')
+
+        try:
+            with open(local_path, 'wb') as f:
+                s3_client.download_fileobj(self.bucket_name, s3_key, f)
+            print(f"✓ Heruntergeladen: s3://{self.bucket_name}/{s3_key} → {local_path}")
+        except Exception as e:
+            print(f"Fehler beim Herunterladen von {self.bucket_name}: {e}")
+            raise
+
+    def delete(self, s3_key: str) -> None:
+        """Delete an object from the bucket
+
+        Args:
+            s3_key: S3 object key
+        """
+        session = boto3.session.Session(
+            profile_name=self.env.profile,
+            region_name=self.env.region
+        )
+        s3_client = session.client('s3')
+
+        try:
+            s3_client.delete_object(Bucket=self.bucket_name, Key=s3_key)
+            print(f"✓ Gelöscht: s3://{self.bucket_name}/{s3_key}")
+        except Exception as e:
+            print(f"Fehler beim Löschen von {self.bucket_name}: {e}")
+            raise
+
     def __repr__(self) -> str:
         return f"S3(bucket='{self.bucket_name}')"
